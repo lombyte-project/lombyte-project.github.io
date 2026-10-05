@@ -122,6 +122,9 @@ a{color:var(--orange)}
 .viewer[open]{display:flex;flex-direction:column}
 .viewer-bar{position:relative;z-index:1;flex:none;display:flex;gap:8px;align-items:center;justify-content:center;padding:12px}
 .viewer-bar button{min-width:64px;padding:7px 20px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--chrome);font:inherit;font-size:.95rem;cursor:pointer}
+.viewer-pane:focus{outline:none}
+.viewer-bar button:focus{outline:none}
+.viewer-bar button:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
 .viewer-bar button:hover{border-color:var(--orange);color:var(--orange)}
 .viewer-zoom{min-width:64px;text-align:center;color:var(--muted);font-size:.9rem}
 .viewer-close{margin-left:16px}
@@ -181,7 +184,7 @@ footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);color:v
     <button type="button" data-zoom="0">Fit</button>
     <button type="button" class="viewer-close" aria-label="Close">✕</button>
   </div>
-  <div class="viewer-pane"><img draggable="false" alt="Map of Ratchet &amp; Clank decompilation progress by unit"></div>
+  <div class="viewer-pane" tabindex="-1" autofocus><img draggable="false" alt="Map of Ratchet &amp; Clank decompilation progress by unit"></div>
 </dialog>
 <script>
 // Reveal the page once the hero background and logo are ready (or after 3 s).
