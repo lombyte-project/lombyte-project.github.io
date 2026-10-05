@@ -55,11 +55,19 @@ values = {
 
 shutil.rmtree(out, ignore_errors=True)
 shutil.copytree(pathlib.Path(__file__).resolve().parent / "site", out)
-# Full logo for link previews, small copies for the page and the favicon.
+# Full logo for link previews, a small copy for the page.
 logo = Image.open("assets/lombyte-logo.png")
 shutil.copy("assets/lombyte-logo.png", out)
 logo.resize((256, 259), Image.LANCZOS).save(out / "logo-256.png", optimize=True)
-logo.resize((48, 48), Image.LANCZOS).save(out / "favicon.png", optimize=True)
+# Favicons must be square (Google wants a multiple of 48 px): pad, then scale.
+side = max(logo.size)
+square = Image.new("RGBA", (side, side))
+square.paste(logo, ((side - logo.width) // 2, (side - logo.height) // 2))
+square.resize((96, 96), Image.LANCZOS).save(out / "favicon-96.png", optimize=True)
+square.save(out / "favicon.ico", sizes=[(16, 16), (32, 32), (48, 48)])
+apple = Image.new("RGB", (180, 180), "#000")
+apple.paste(square.resize((150, 150), Image.LANCZOS), (15, 15), square.resize((150, 150), Image.LANCZOS))
+apple.save(out / "apple-touch-icon.png", optimize=True)
 for name in ("index.html", "robots.txt", "sitemap.xml"):
     text = (out / name).read_text()
     for key, value in values.items():
