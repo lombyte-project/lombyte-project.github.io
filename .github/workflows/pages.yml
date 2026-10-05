@@ -1,6 +1,7 @@
 # Builds the site from site/ plus data from the game repository
 # (lombyte-project/lombyte: logo, latest commits, progress report) and deploys
-# it to GitHub Pages. Runs on every push here, hourly and on demand.
+# it to GitHub Pages. Runs on every push here, after each progress publish on the game main, hourly
+# and on demand.
 name: pages
 
 on:
@@ -9,6 +10,8 @@ on:
   schedule:
     - cron: "17 * * * *"
   workflow_dispatch:
+  repository_dispatch:
+    types: [progress-updated]
 
 permissions:
   contents: read
