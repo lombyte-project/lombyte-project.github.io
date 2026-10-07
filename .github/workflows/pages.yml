@@ -52,3 +52,11 @@ jobs:
           path: game/build/site
       - id: deploy
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
+      # Tell Bing (and other IndexNow engines) the page changed. The key file
+      # site/<key>.txt proves ownership. Skipped on the hourly run.
+      - name: Ping IndexNow
+        if: github.event_name != 'schedule'
+        continue-on-error: true
+        run: |
+          curl --fail -sS -o /dev/null -w "IndexNow %{http_code}\n" \
+            "https://api.indexnow.org/indexnow?url=https://lombyte-project.github.io/&key=804a690346734f7ec4bbab2ca91b3143"
