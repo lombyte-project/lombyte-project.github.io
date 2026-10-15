@@ -186,11 +186,12 @@ input.nn{font-family:var(--mono)}
 .sgrp:first-child{margin-top:0}
 .step{display:grid;grid-template-columns:24px minmax(0,1fr);gap:12px;font-size:14px;line-height:21px}
 .sn{width:24px;height:24px;border-radius:50%;background:var(--orange-bg);color:var(--orange);font-size:12px;font-weight:700;display:grid;place-items:center}
-.step p{margin:1px 0 10px}
+.step p{margin:1px 0 10px;text-wrap:pretty}
+.step .nw{white-space:nowrap}
 .step code{font-family:var(--mono);font-size:.9em;color:var(--fg)}
 .tell{margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:4px;color:var(--soft)}
 .dbody{display:flex;flex-direction:column;gap:20px}
-.dfoot{padding:12px 20px calc(12px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line)}
+.dfoot{text-wrap:pretty;padding:12px 20px calc(12px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line)}
 .pic{display:block;width:100%;height:auto;font-family:var(--ui)}
 .pic .pw{fill:var(--bg);stroke:var(--line)} .pic .pbar{fill:var(--raise)} .pic .pb{fill:var(--raise)} .pic .pp{fill:#090c10;stroke:var(--line)}
 .pic .pl{fill:var(--line)} .pic .pm{fill:var(--raise);stroke:#30363d}
@@ -896,7 +897,9 @@ function fixedHome(e){
   const n = hits[0][0], ln = IDX.alias[n] || n;
   return [n, where(n).a, realName(ln) || srcName(n)];
 }
-function render(s){ let n = 0; return s.map(x => typeof x === 'string' ? x : `<div class="step"><span class="sn">${++n}</span><div><p>${x[0]}</p>${x[1] || ''}</div></div>`).join(''); }
+/* Keep the last two words (a copy chip counts as one) on one line, so a step never ends with one word alone. */
+function glue(h){ const sp = []; let d = 0; for (let i = 0; i < h.length; i++){ const c = h[i]; if (c === '<') d++; else if (c === '>') d--; else if (c === ' ' && !d) sp.push(i); } if (!sp.length) return h; const j = sp.length > 1 ? sp[sp.length - 2] + 1 : 0; return h.slice(0, j) + '<span class="nw">' + h.slice(j) + '</span>'; }
+function render(s){ let n = 0; return s.map(x => typeof x === 'string' ? x : `<div class="step"><span class="sn">${++n}</span><div><p>${glue(x[0].replace(/<button[^>]*>[^<]*<\/button>[.,;:)]*/g, m => `<span class="nw">${m}</span>`))}</p>${x[1] || ''}</div></div>`).join(''); }
 /* 4 bytes as PCSX2's Memory view shows them (back to front) -> the float they hold. */
 function fconv(){
   const d = ($('fconv').value.match(/[0-9a-f]{2}/gi) || []).slice(0, 4);
@@ -956,7 +959,7 @@ function pic(kind, o = {}){
 async function openHelp(e){
   const d = $('drawer'), fp = e.kind === 'field' ? await fieldProbe(e) : null;
   d.querySelector('h2').textContent = 'Check it in PCSX2';
-  $('dfoot').textContent = 'Sketches of the PCSX2 2.x debugger: click the orange part.';
+  $('dfoot').innerHTML = 'Sketches of the PCSX2 2.x debugger: click the orange&nbsp;part.';
   $('dbody').innerHTML = steps(e, fp);
   if ($('fconv')){ $('fconv').oninput = fconv; fconv(); }
   $('dis').oninput = decode; $('dlvl').onchange = decode; wire($('dbody'));
