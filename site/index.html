@@ -180,13 +180,14 @@ html.going main,html.going .hero,html.going .bar,html.going footer{transition:op
 .demo-bar span{margin-left:8px;font-family:ui-monospace,Menlo,monospace}
 .desk-demo pre{margin:0;padding:14px 16px;overflow-x:auto;line-height:1.7;color:var(--text)}
 .desk-demo .k{color:#e39a58}.desk-demo .n{color:#c9a6e8}.desk-demo .fn{color:#8ec3e3}
-.swap{position:relative;display:inline-grid;border-radius:3px;margin-left:.5ch}
+.swap{position:relative;display:inline-grid;border-radius:3px;margin-left:.5ch;background:rgba(222,129,47,.18);animation:hl 6s ease-in-out infinite}
 .swap s,.swap u{grid-area:1/1;text-decoration:none;padding:0 4px;border-radius:3px;text-align:center}
-.swap s{color:var(--muted);animation:out 6s infinite}
-.swap u{color:#000;background:var(--orange);font-weight:600;opacity:0;animation:in 6s infinite}
-@keyframes out{0%,35%{opacity:1;background:rgba(222,129,47,.18)}45%,92%{opacity:0}100%{opacity:1}}
-@keyframes in{0%,40%{opacity:0;transform:translateY(4px)}50%,90%{opacity:1;transform:none}100%{opacity:0}}
-@media (prefers-reduced-motion:reduce){.swap s{animation:none;opacity:0}.swap u{animation:none;opacity:1}}
+.swap s{color:var(--muted);animation:out 6s ease-in-out infinite}
+.swap u{color:#000;font-weight:600;opacity:0;animation:in 6s ease-in-out infinite}
+@keyframes out{0%,35%{opacity:1}45%,90%{opacity:0}100%{opacity:1}}
+@keyframes in{0%,40%{opacity:0;transform:translateY(4px)}50%,88%{opacity:1;transform:none}98%,100%{opacity:0}}
+@keyframes hl{0%,35%{background:rgba(222,129,47,.18)}50%,88%{background:#de812f}100%{background:rgba(222,129,47,.18)}}
+@media (prefers-reduced-motion:reduce){.swap s{animation:none;opacity:0}.swap u{animation:none;opacity:1}.swap{animation:none;background:#de812f}}
 .demo-note{display:flex;align-items:center;gap:8px;padding:10px 16px;border-top:1px solid var(--panel-line);color:var(--muted);font-size:.8rem}
 .demo-note b{color:var(--chrome);font-weight:500}
 .demo-note .dn{white-space:nowrap}
