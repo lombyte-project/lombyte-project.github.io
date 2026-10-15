@@ -135,7 +135,7 @@ h1 span{color:var(--orange)}
 .how{all:unset;box-sizing:border-box;cursor:pointer;height:36px;padding:0 16px;display:inline-flex;align-items:center;border-radius:8px;background:linear-gradient(120deg,#0b1f6b,#1d4fc4 45%,#3f8cf0 75%,#1d4fc4) 0 0/220% 100%;color:#fff;font-size:13px;font-weight:600;box-shadow:inset 0 0 0 1px rgba(140,190,255,.35),0 2px 12px rgba(40,110,230,.25);transition:background-position .6s ease,box-shadow .3s ease}
 .how:hover{background-position:100% 0;box-shadow:inset 0 0 0 1px rgba(170,210,255,.55),0 2px 18px rgba(60,140,255,.4)}
 .how:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
-.note{margin:0;padding:12px 16px;border-top:1px solid var(--line);font-size:13px;line-height:20px;color:var(--soft)}
+.note{text-wrap:balance;margin:0;padding:12px 16px;border-top:1px solid var(--line);font-size:13px;line-height:20px;color:var(--soft)}
 .small{font-size:13px;color:var(--soft)}
 .faint{font-size:12.5px;color:var(--dim)}
 .steps{margin:4px 0 0;padding:12px 0 0 24px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px;font-size:14px;max-width:88ch}
@@ -186,12 +186,12 @@ input.nn{font-family:var(--mono)}
 .sgrp:first-child{margin-top:0}
 .step{display:grid;grid-template-columns:24px minmax(0,1fr);gap:12px;font-size:14px;line-height:21px}
 .sn{width:24px;height:24px;border-radius:50%;background:var(--orange-bg);color:var(--orange);font-size:12px;font-weight:700;display:grid;place-items:center}
-.step p{margin:1px 0 10px;text-wrap:pretty}
+.step p{margin:1px 0 10px;text-wrap:balance}
 .step .nw{white-space:nowrap}
 .step code{font-family:var(--mono);font-size:.9em;color:var(--fg)}
 .tell{margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:4px;color:var(--soft)}
 .dbody{display:flex;flex-direction:column;gap:20px}
-.dfoot{text-wrap:pretty;padding:12px 20px calc(12px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line)}
+.dfoot{text-wrap:balance;padding:12px 20px calc(12px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line)}
 .pic{display:block;width:100%;height:auto;font-family:var(--ui)}
 .pic .pw{fill:var(--bg);stroke:var(--line)} .pic .pbar{fill:var(--raise)} .pic .pb{fill:var(--raise)} .pic .pp{fill:#090c10;stroke:var(--line)}
 .pic .pl{fill:var(--line)} .pic .pm{fill:var(--raise);stroke:#30363d}
