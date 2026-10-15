@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Lombyte • Ratchet and Clank Decompilation</title>
-<meta name="description" content="The open-source Ratchet and Clank decompilation. Lombyte turns the 2002 PS2 classic back into readable C that rebuilds the original game byte for byte.">
+<meta name="description" content="The open-source Ratchet and Clank decompilation. Lombyte turns the 2002 PS2 classic back into readable C that rebuilds the original game byte for byte, the groundwork for a future native PC port.">
 <meta name="keywords" content="Ratchet and Clank decompilation, Ratchet &amp; Clank decomp, Lombyte, PS2 decompilation, Ratchet and Clank source code, matching decompilation, reverse engineering">
 <meta name="author" content="Mateusz Kłysz">
 <meta name="robots" content="index, follow, max-image-preview:large">
@@ -17,13 +17,13 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Lombyte">
 <meta property="og:title" content="Lombyte • Ratchet and Clank Decompilation">
-<meta property="og:description" content="The open-source Ratchet and Clank decompilation. Lombyte turns the 2002 PS2 classic back into readable C that rebuilds the original game byte for byte.">
+<meta property="og:description" content="The open-source Ratchet and Clank decompilation. Lombyte turns the 2002 PS2 classic back into readable C that rebuilds the original game byte for byte, the groundwork for a future native PC port.">
 <meta property="og:url" content="@SITE@">
 <meta property="og:image" content="@SITE@lombyte-logo.png">
 <meta property="og:image:alt" content="Lombyte logo">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Lombyte • Ratchet and Clank Decompilation">
-<meta name="twitter:description" content="The open-source Ratchet and Clank decompilation. Lombyte turns the 2002 PS2 classic back into readable C that rebuilds the original game byte for byte.">
+<meta name="twitter:description" content="The open-source Ratchet and Clank decompilation. Lombyte turns the 2002 PS2 classic back into readable C that rebuilds the original game byte for byte, the groundwork for a future native PC port.">
 <meta property="og:locale" content="en_US">
 <link rel="preload" as="image" href="hero.jpg" fetchpriority="high">
 <link rel="preconnect" href="https://raw.githubusercontent.com">
@@ -36,16 +36,16 @@
       "@id": "@SITE@#website",
       "url": "@SITE@",
       "name": "Lombyte",
-      "alternateName": ["Lombyte Project", "Ratchet and Clank Decompilation", "Ratchet & Clank Decompilation"],
+      "alternateName": ["Lombyte Project", "Ratchet and Clank Decompilation", "Ratchet & Clank Decompilation", "Ratchet and Clank Decomp"],
       "inLanguage": "en"
     },
     {
       "@type": "SoftwareSourceCode",
       "name": "Lombyte",
       "alternateName": "Ratchet & Clank Decompilation",
-      "description": "The open-source Ratchet and Clank decompilation. Lombyte turns the 2002 PS2 classic back into readable C that rebuilds the original game byte for byte.",
+      "description": "The open-source Ratchet and Clank decompilation. Lombyte turns the 2002 PS2 classic back into readable C that rebuilds the original game byte for byte, the groundwork for a future native PC port.",
       "url": "@SITE@",
-      "sameAs": ["https://github.com/lombyte-project/lombyte", "https://decomp.dev/lombyte-project/lombyte"],
+      "sameAs": ["https://github.com/lombyte-project/lombyte", "https://bytematch.dev/lombyte-project/Lombyte", "https://recomp.fyi/game/ratchet-and-clank-ps2"],
       "codeRepository": "https://github.com/lombyte-project/lombyte",
       "programmingLanguage": ["C", "MIPS assembly"],
       "runtimePlatform": "PlayStation 2",
@@ -62,8 +62,8 @@
          "acceptedAnswer": {"@type": "Answer", "text": "Lombyte is a decompilation of Ratchet & Clank (2002) for PlayStation 2. It rebuilds the game's code as C that compiles to the exact same bytes as the original."}},
         {"@type": "Question", "name": "Does Lombyte include the game?",
          "acceptedAnswer": {"@type": "Answer", "text": "No. Lombyte contains no game data, executables or disc images. You need your own copy of the USA release (SCUS_971.99)."}},
-        {"@type": "Question", "name": "Is this a PC port of Ratchet & Clank?",
-         "acceptedAnswer": {"@type": "Answer", "text": "Not yet. The current goal is a fully matching decompilation; a native port is the long-term goal."}}
+        {"@type": "Question", "name": "Is this a PC port or recomp of Ratchet & Clank?",
+         "acceptedAnswer": {"@type": "Answer", "text": "Not yet. Lombyte is a decompilation, not a recomp: it rebuilds the original source code as C. A native PC port built from that code is the long-term goal."}}
       ]
     }
   ]
@@ -169,7 +169,7 @@ footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);color:v
     <ul class="cards">
       <li class="tile"><span class="tag">01 · Goal</span><h3>What is Lombyte?</h3><p>A matching decompilation of Ratchet &amp; Clank for PS2: every function is rewritten in C until the reconstructed compiler produces identical machine code.</p></li>
       <li class="tile"><span class="tag">02 · Legal</span><h3>Does it include the game?</h3><p>No. Lombyte contains no game data, executables or disc images. You need your own copy of the USA release (SCUS_971.99).</p></li>
-      <li class="tile"><span class="tag">03 · Future</span><h3>Is this a PC port?</h3><p>Not yet. A fully matching decompilation comes first; a native port is the long-term goal.</p></li>
+      <li class="tile"><span class="tag">03 · Future</span><h3>Is this a PC port or a recomp?</h3><p>Not yet. Lombyte is a decompilation, not a recomp: it rebuilds the original source code as C. A native PC port built from that code is the long-term goal.</p></li>
       <li class="tile"><span class="tag">04 · Join</span><h3>Can I help?</h3><p>Yes. Pick a function, match it and open a pull request. The <a href="https://github.com/lombyte-project/lombyte/blob/main/CONTRIBUTING.md">contributing guide</a> covers the setup.</p></li>
     </ul>
   </section>
