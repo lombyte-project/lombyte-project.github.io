@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Lombyte Naming Desk</title>
 <meta name="description" content="Know Ratchet &amp; Clank? Click a placeholder name in the Lombyte decompilation, check it in PCSX2 and suggest a real name as a GitHub issue. No coding needed.">
-<link rel="canonical" href="https://lombyte-project.github.io/namingdesk/">
-<link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png">
-<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="canonical" href="https://lombyte-project.github.io/namingdesk">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="theme-color" content="#000000">
 <script>try{if(sessionStorage.getItem("lb.go")==="desk"){document.documentElement.classList.add("enter");sessionStorage.removeItem("lb.go")}}catch{}</script>
 <style>
@@ -314,7 +314,7 @@ html.leave .wrap{transition:opacity .35s ease,transform .35s ease,filter .35s ea
 
 <div class="wrap">
   <header>
-    <div class="title"><h1><a class="home" id="home" href="../" title="Back to the Lombyte homepage"><img src="../logo-256.png" alt="" width="30" height="30">Lombyte</a> <span>Naming Desk</span></h1><span class="preview">preview · <code class="mono" id="commit">…</code> · <a class="bug" id="bug" href="#" target="_blank" rel="noopener">Report a bug</a></span><button class="bk" id="basketBtn" type="button" aria-controls="drawer">Draft issue <b id="bcount">0</b></button></div>
+    <div class="title"><h1><a class="home" id="home" href="./" title="Back to the Lombyte homepage"><img src="logo-256.png" alt="" width="30" height="30">Lombyte</a> <span>Naming Desk</span></h1><span class="preview">preview · <code class="mono" id="commit">…</code> · <a class="bug" id="bug" href="#" target="_blank" rel="noopener">Report a bug</a></span><button class="bk" id="basketBtn" type="button" aria-controls="drawer">Draft issue <b id="bcount">0</b></button></div>
     <p class="lead">Know what something in the game code really does? Click its name, type a better one and send it as a GitHub issue. Any file, function, struct, field or global in <code>src/</code> or <code>include/</code> can be renamed.</p>
   </header>
   <div class="grid">
@@ -375,7 +375,7 @@ async function gunzip(u){
   return JSON.parse(new TextDecoder().decode(u));
 }
 async function load(name){
-  const r = await fetch('t/' + name + '.txt'); if (!r.ok) throw new Error('HTTP ' + r.status);
+  const r = await fetch('naming-data/t/' + name + '.txt'); if (!r.ok) throw new Error('HTTP ' + r.status);
   const b = atob((await r.text()).trim()), u = new Uint8Array(b.length);
   for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i);
   return gunzip(u);
@@ -838,7 +838,7 @@ function steps(e, fp){
   s.push(B('Get ready'));
   s.push([`Run the <b>US</b> game (SCUS-97199) in PCSX2, then <b>Debug → Open Debugger</b>.${lv ? ` Play until level ${lv} is loaded.` : ''}`, pic('open')]);
   /* Resident code and data (boot, the hero) are the same in every level: only per-level ones get a level file. */
-  const sl = lv, sym = f => `<a href="sym/${f}.sym" target="_blank" rel="noopener" download>${f}.sym</a>`;
+  const sl = lv, sym = f => `<a href="naming-data/sym/${f}.sym" target="_blank" rel="noopener" download>${f}.sym</a>`;
   s.push([`Optional: to see Lombyte's names in the debugger, add ${sym('boot')}${sl ? ` and ${sym('level-' + sl)} (load condition ${C('[0x15ED84]==0x' + (+sl).toString(16))})` : ''} as ${sl ? 'symbol files' : 'a symbol file'} in the debugger's analysis settings.`, null]);
   if (e.kind === 'function'){
     const a = hex(where(e.word).a);
