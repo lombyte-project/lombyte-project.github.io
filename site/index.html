@@ -192,11 +192,12 @@ html.going main,html.going .hero,html.going .bar,html.going footer{transition:op
 .demo-note .dn{white-space:nowrap}
 @media (max-width:520px){.demo-note .dn{white-space:normal}.demo-note .dn b{display:block}}
 .demo-note .dot{width:8px;height:8px;border-radius:50%;background:#6cc495;flex:none}
-.desk-stat{margin:14px 0 0;color:var(--muted);font-size:.9rem}.desk-stat b{color:var(--orange);font-weight:700}
+.desk-side{min-width:0}
+.desk-stat{margin:12px 0 0;text-align:right;color:var(--muted);font-size:.9rem}.desk-stat b{color:var(--orange);font-weight:700}
 .desk-count{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:12px 0 0;padding:0;list-style:none}
 .desk-count li{padding:12px 16px;border:1px solid var(--panel-line);border-radius:8px;color:var(--muted);font-size:.85rem}
 .desk-count b{display:block;color:var(--text);font-size:1.3rem;font-weight:600}
-@media (max-width:760px){.desk-card{grid-template-columns:1fr;padding:20px}.desk-count{grid-template-columns:1fr}}
+@media (max-width:760px){.desk-card{grid-template-columns:minmax(0,1fr);padding:20px}.desk-stat{text-align:left}.desk-count{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -226,9 +227,9 @@ html.going main,html.going .hero,html.going .bar,html.going footer{transition:op
           <li><b>3</b>Rename it</li>
           <li><b>4</b>Send an issue</li>
         </ol>
-        <a class="desk-cta" href="namingdesk/index.html" data-desk>Open the Naming Desk</a>
-        <p class="desk-stat" id="deskStat" hidden></p>
+        <a class="desk-cta" href="namingdesk/" data-desk>Open the Naming Desk</a>
       </div>
+      <div class="desk-side">
       <div class="desk-demo" aria-hidden="true">
         <div class="demo-bar"><i></i><i></i><i></i><span>ui/hud/002661a0.c</span></div>
         <pre><span class="k">void</span> <span class="fn">init_hud_elem</span>(HudElem *e) {
@@ -237,6 +238,8 @@ html.going main,html.going .hero,html.going .bar,html.going footer{transition:op
     e-&gt;h = <span class="n">0x80</span>;
 }</pre>
         <div class="demo-note"><span class="dot"></span><span class="dn">Player's idea: <b>counts down before the icon fades</b></span></div>
+      </div>
+      <p class="desk-stat" id="deskStat" hidden></p>
       </div>
     </div>
   </section>
@@ -258,7 +261,7 @@ html.going main,html.going .hero,html.going .bar,html.going footer{transition:op
       <li class="tile"><span class="tag">01 · Goal</span><h3>What is Lombyte?</h3><p>A matching decompilation of Ratchet &amp; Clank for PS2: every function is rewritten in C until the reconstructed compiler produces identical machine code.</p></li>
       <li class="tile"><span class="tag">02 · Legal</span><h3>Does it include the game?</h3><p>No. Lombyte contains no game data, executables or disc images. You need your own copy of the USA release (SCUS_971.99).</p></li>
       <li class="tile"><span class="tag">03 · Future</span><h3>Is this a PC port or a recomp?</h3><p>Not yet. Lombyte is a decompilation, not a recomp: it rebuilds the original source code as C. A native PC port built from that code is the long-term goal.</p></li>
-      <li class="tile"><span class="tag">04 · Join</span><h3>Can I help?</h3><p>Yes. Pick a function, match it and open a pull request; the <a href="https://github.com/lombyte-project/lombyte/blob/main/CONTRIBUTING.md">contributing guide</a> covers the setup. No C? Name things in the <a href="namingdesk/index.html" data-desk>Naming Desk</a>.</p></li>
+      <li class="tile"><span class="tag">04 · Join</span><h3>Can I help?</h3><p>Yes. Pick a function, match it and open a pull request; the <a href="https://github.com/lombyte-project/lombyte/blob/main/CONTRIBUTING.md">contributing guide</a> covers the setup. No C? Name things in the <a href="namingdesk/" data-desk>Naming Desk</a>.</p></li>
     </ul>
   </section>
 
