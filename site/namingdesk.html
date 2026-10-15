@@ -9,7 +9,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="theme-color" content="#000000">
-<script>try{if(sessionStorage.getItem("lb.go")==="desk"){document.documentElement.classList.add("enter");sessionStorage.removeItem("lb.go")}}catch{}</script>
+<script>{const h=document.documentElement;let enter=false;try{enter=sessionStorage.getItem("lb.go")==="desk";if(enter)sessionStorage.removeItem("lb.go")}catch{}h.classList.add(enter?"enter":"loading")}</script>
 <style>
 /* Layout: search + tree on the left, the file on the right, a suggestion card that slides up
    from the bottom when you pick a name. Same palette as lombyte-project.github.io:
@@ -275,6 +275,9 @@ textarea{font-family:var(--mono);font-size:13px;line-height:20px;color:var(--fg)
 .bitem code{font-family:var(--mono);font-size:13px}
 .bitem .faint{margin-top:2px}
 .bempty{color:var(--soft);font-size:14px}
+/* Opened directly: the desk fades in once its code is on screen, like the homepage. */
+html.loading body{opacity:0}
+body{transition:opacity .6s ease}
 /* Arriving from the homepage: the orange glow the card grew into fades while the desk rises in. */
 html.enter body::before{content:"";position:fixed;inset:0;z-index:50;pointer-events:none;background:radial-gradient(ellipse 90% 70% at 50% 0%,rgba(222,129,47,.28),rgba(0,0,0,0) 70%),#000;animation:veil .75s cubic-bezier(.4,0,.2,1) .05s both}
 html.enter header,html.enter .side,html.enter .sheet{animation:rise .8s cubic-bezier(.16,1,.3,1) both}
@@ -1510,6 +1513,11 @@ $('home').addEventListener('click', ev => {
   setTimeout(() => location.href = $('home').href, 340);
 });
 addEventListener('pageshow', ev => { if (ev.persisted) document.documentElement.classList.remove('leave', 'enter'); });
+{
+  const show = () => document.documentElement.classList.remove('loading');
+  if (document.querySelector('.code .row')) show();
+  else { const mo = new MutationObserver(() => { if (document.querySelector('.code .row')) { mo.disconnect(); show(); } }); mo.observe(document.body, {childList: true, subtree: true}); setTimeout(() => { mo.disconnect(); show(); }, 3000); }
+}
 document.addEventListener('keydown', ev => { if (ev.key !== 'Escape') return; if (!$('welcome').hidden) closeWelcome(); else if (!$('drawer').hidden) closeHelp(); });
 (async () => {
   try { IDX = await load('_index'); }
