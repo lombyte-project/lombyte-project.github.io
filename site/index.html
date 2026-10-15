@@ -105,7 +105,7 @@ h2{margin:0 0 16px;font-size:1.25rem;font-weight:600}
 .stats b{display:block;color:var(--orange);font-size:1.8rem;font-weight:600;line-height:1.2}
 .stats span{color:var(--muted);font-size:.9rem}
 .map{display:block;margin-top:16px}
-.map img{display:block;width:100%;height:auto;border-radius:8px}
+.map img{display:block;width:100%;height:auto;border-radius:10px}
 .note{color:var(--muted);font-size:.9rem}
 .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:0;padding:0;list-style:none}
 .cards li{padding:20px;border-top:2px solid var(--orange)}
@@ -151,7 +151,7 @@ footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);color:v
 .links a em{font-style:normal;font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-left:6px;padding:1px 6px;border-radius:4px;background:#000;color:var(--orange);vertical-align:1px}
 .desk{margin-top:16px}
 main>section.desk:first-child{margin-top:-24px}
-.desk-card{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:24px;align-items:center;padding:28px;border-color:transparent;background:linear-gradient(135deg,rgba(222,129,47,.12),rgba(13,17,23,1) 55%)}
+.desk-card{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:24px;align-items:center;padding:28px;border-color:transparent;border-radius:10px;background:linear-gradient(135deg,rgba(222,129,47,.12),rgba(13,17,23,1) 55%)}
 .desk h2{font-size:1.6rem;line-height:1.25;margin:6px 0 10px}
 .desk-text p{margin:0;color:var(--muted)}
 .desk code,.desk pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.88em}
@@ -160,7 +160,7 @@ main>section.desk:first-child{margin-top:-24px}
 @media (max-width:400px){.desk-steps{font-size:.85rem;gap:8px 20px}.desk-steps b{width:20px;height:20px;margin-right:6px}}
 .desk-steps b{flex:none;display:inline-grid;place-items:center;width:22px;height:22px;margin-right:8px;border-radius:50%;background:rgba(222,129,47,.18);color:var(--orange);font-size:.75rem}
 /* Going to the Naming Desk: the card grows to fill the screen and turns into the desk's backdrop. */
-.fly{position:fixed;z-index:100;border-radius:8px;border:1px solid transparent;background:linear-gradient(135deg,rgba(222,129,47,.12),#0d1117 55%);overflow:hidden;pointer-events:none;transition:top .65s cubic-bezier(.7,0,.15,1),left .65s cubic-bezier(.7,0,.15,1),width .65s cubic-bezier(.7,0,.15,1),height .65s cubic-bezier(.7,0,.15,1),border-radius .65s ease,border-color .65s ease}
+.fly{position:fixed;z-index:100;border-radius:10px;border:1px solid transparent;background:linear-gradient(135deg,rgba(222,129,47,.12),#0d1117 55%);overflow:hidden;pointer-events:none;transition:top .65s cubic-bezier(.7,0,.15,1),left .65s cubic-bezier(.7,0,.15,1),width .65s cubic-bezier(.7,0,.15,1),height .65s cubic-bezier(.7,0,.15,1),border-radius .65s ease,border-color .65s ease}
 .fly::after{content:"";position:absolute;inset:0;opacity:0;transition:opacity .55s ease .15s;background:radial-gradient(ellipse 90% 70% at 50% 0%,rgba(222,129,47,.28),rgba(0,0,0,0) 70%),#000}
 .fly.full{border-radius:0;border-color:transparent}
 .fly.full::after{opacity:1}
@@ -174,7 +174,7 @@ html.going main,html.going .hero,html.going .bar,html.going footer{transition:op
 .desk-cta{display:inline-block;padding:11px 20px;border-radius:8px;background:var(--orange);color:#000;font-weight:700;text-decoration:none}
 .desk-cta::after{content:" →"}
 .desk-cta:hover{filter:brightness(1.1)}
-.desk-demo{background:#050608;border:1px solid var(--panel-line);border-radius:10px;overflow:hidden;font-size:.85rem}
+.desk-demo{background:#050608;border:1px solid var(--panel-line);border-radius:9px;overflow:hidden;font-size:.85rem}
 .demo-bar{display:flex;align-items:center;gap:6px;padding:8px 12px;border-bottom:1px solid var(--panel-line);color:var(--muted);font-size:.75rem}
 .demo-bar i{width:9px;height:9px;border-radius:50%;background:#30363d}
 .demo-bar span{margin-left:8px;font-family:ui-monospace,Menlo,monospace}
