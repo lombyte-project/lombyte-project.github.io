@@ -69,25 +69,33 @@
   ]
 }
 </script>
-<script>document.documentElement.classList.add("loading")</script>
+<script>{const h=document.documentElement;let back=false;try{back=sessionStorage.getItem("lb.go")==="home";if(back)sessionStorage.removeItem("lb.go")}catch{}if(back){h.classList.add("back");if("scrollRestoration"in history)history.scrollRestoration="manual"}else h.classList.add("loading")}</script>
 <style>
 html.loading body{opacity:0}
+/* Back from the Naming Desk: the same veil and rise the Desk opens with, played by CSS so it never depends on load timing. */
+html.back body::before{content:"";position:fixed;inset:0;z-index:50;pointer-events:none;background:radial-gradient(ellipse 90% 70% at 50% 0%,rgba(222,129,47,.28),rgba(0,0,0,0) 70%),#000;animation:veil .75s cubic-bezier(.4,0,.2,1) .05s both}
+html.back .bar,html.back .hero,html.back main{animation:rise .8s cubic-bezier(.16,1,.3,1) both}
+html.back .hero{animation-delay:.12s} html.back main{animation-delay:.24s}
+@keyframes veil{to{opacity:0}}
+@keyframes rise{from{opacity:0;transform:translateY(24px) scale(.985);filter:blur(8px)}}
+@media (prefers-reduced-motion:reduce){html.back body::before{display:none}html.back .bar,html.back .hero,html.back main{animation:none}}
 body{transition:opacity .6s ease}
 .map img{transition:opacity .4s ease}
 .map img:not(.ready){opacity:0}
 :root{--bg:#000;--panel:#0d1117;--panel-line:#21262d;--orange:#de812f;--text:#e8edf5;--muted:#a6adc8;--chrome:#c3cbd8;--line:#26262b}
 *{box-sizing:border-box}
-html{background:var(--bg);scroll-behavior:smooth}
+html{background:var(--bg);scroll-behavior:smooth;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
-body{margin:0;color:var(--text);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans",Helvetica,Arial,sans-serif}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans",Helvetica,Arial,sans-serif}
 main{max-width:860px;margin:0 auto;padding:0 16px 40px}
 main>section:first-child{margin-top:16px}
-header img{width:132px;height:auto}
-h1{margin:16px 0 4px;font-size:2.7rem;font-weight:600;letter-spacing:-.01em}
+header img{width:110px;height:auto}
+h1{margin:0 0 4px;font-size:2.7rem;font-weight:600;letter-spacing:-.01em}
 .sub{display:block;color:var(--orange);font-size:1.15rem;font-weight:600}
 .lead{max-width:820px;margin:18px auto 0;color:var(--muted)}
 .links{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin:28px 0 0}
 .links a{padding:8px 16px;border:1px solid var(--line);border-radius:6px;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);color:var(--chrome);text-decoration:none;font-size:.95rem}
+.links-br{display:none}
 .links a.primary{border-color:var(--orange);color:var(--orange)}
 .links a:hover{border-color:var(--chrome)}
 section{margin-top:56px}
@@ -114,7 +122,9 @@ a{color:var(--orange)}
 .hero .lead{color:var(--chrome)}
 .tile{position:relative;overflow:hidden;background:var(--panel);border:1px solid var(--panel-line);border-radius:8px;transition:transform .15s ease-out;transform:perspective(600px) rotateX(var(--rx,0)) rotateY(var(--ry,0))}
 .tile::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .2s;background:radial-gradient(circle at var(--gx,50%) var(--gy,50%),rgba(255,255,255,.16),transparent 60%)}
-.tile:hover::after{opacity:1}
+@media (hover:hover) and (pointer:fine){.tile:hover::after{opacity:1}}
+@media (hover:none),(pointer:coarse){.tile{transform:none!important;transition:none}.tile::after{display:none}}
+*{-webkit-tap-highlight-color:transparent}
 .map{cursor:zoom-in}
 .viewer{width:100vw;height:100dvh;max-width:none;max-height:none;margin:0;padding:0;border:0;background:transparent;color:var(--text);opacity:0;transition:opacity .3s ease}
 .viewer.shown{opacity:1}
@@ -135,7 +145,58 @@ a{color:var(--orange)}
 footer p{margin:6px 0}
 footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-size:.85rem;text-align:center}
 @media (max-width:700px){.stats{grid-template-columns:1fr 1fr}.stats li:last-child{grid-column:1/-1}}
-@media (max-width:520px){.cards{grid-template-columns:1fr}h1{font-size:2rem}.hero{padding-top:36px}}
+@media (max-width:520px){.links{gap:8px}.links a{white-space:nowrap;padding:8px 14px;font-size:.9rem}.links-br{display:block;flex-basis:100%;height:0}.cards{grid-template-columns:1fr}h1{font-size:2rem}.hero{padding-top:36px}}
+.links a.desk-link{border-color:var(--orange);background:var(--orange);color:#000;font-weight:600}
+.links a.desk-link:hover{border-color:#fff}
+.links a em{font-style:normal;font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-left:6px;padding:1px 6px;border-radius:4px;background:#000;color:var(--orange);vertical-align:1px}
+.desk{margin-top:16px}
+main>section.desk:first-child{margin-top:-24px}
+.desk-card{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:24px;align-items:center;padding:28px;border-color:rgba(222,129,47,.45);background:linear-gradient(135deg,rgba(222,129,47,.12),rgba(13,17,23,1) 55%)}
+.desk h2{font-size:1.6rem;line-height:1.25;margin:6px 0 10px}
+.desk-text p{margin:0;color:var(--muted)}
+.desk code,.desk pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.88em}
+.desk-steps{display:grid;grid-template-columns:repeat(2,max-content);gap:8px 28px;margin:16px 0 20px;padding:0;list-style:none;font-size:.9rem;color:var(--chrome)}
+.desk-steps li{display:flex;align-items:center;min-width:0;white-space:nowrap;line-height:22px}
+@media (max-width:400px){.desk-steps{font-size:.85rem;gap:8px 20px}.desk-steps b{width:20px;height:20px;margin-right:6px}}
+.desk-steps b{flex:none;display:inline-grid;place-items:center;width:22px;height:22px;margin-right:8px;border-radius:50%;background:rgba(222,129,47,.18);color:var(--orange);font-size:.75rem}
+/* Going to the Naming Desk: the card grows to fill the screen and turns into the desk's backdrop. */
+.fly{position:fixed;z-index:100;border-radius:8px;border:1px solid rgba(222,129,47,.45);background:linear-gradient(135deg,rgba(222,129,47,.12),#0d1117 55%);overflow:hidden;pointer-events:none;transition:top .65s cubic-bezier(.7,0,.15,1),left .65s cubic-bezier(.7,0,.15,1),width .65s cubic-bezier(.7,0,.15,1),height .65s cubic-bezier(.7,0,.15,1),border-radius .65s ease,border-color .65s ease}
+.fly::after{content:"";position:absolute;inset:0;opacity:0;transition:opacity .55s ease .15s;background:radial-gradient(ellipse 90% 70% at 50% 0%,rgba(222,129,47,.28),rgba(0,0,0,0) 70%),#000}
+.fly.full{border-radius:0;border-color:transparent}
+.fly.full::after{opacity:1}
+.fly .ghostcard{position:absolute;inset:0;transition:opacity .3s ease,filter .3s ease,transform .5s ease}
+.fly.full .ghostcard{opacity:0;filter:blur(10px);transform:scale(1.04)}
+html.going main,html.going .hero,html.going .bar,html.going footer{transition:opacity .45s ease,filter .45s ease,transform .6s cubic-bezier(.7,0,.15,1);opacity:0;filter:blur(6px);transform:scale(.97)}
+.totop{position:fixed;right:24px;bottom:24px;z-index:20;width:44px;height:44px;border-radius:50%;border:0;background:var(--orange);color:#000;display:grid;place-items:center;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.6);opacity:0;transform:translateY(8px);pointer-events:none;transition:opacity .2s,transform .2s,border-color .2s,color .2s}
+.totop.on{opacity:1;transform:none;pointer-events:auto}
+.totop:hover{filter:brightness(1.12)}
+.totop:focus-visible{outline:2px solid var(--text);outline-offset:2px}
+.desk-cta{display:inline-block;padding:11px 20px;border-radius:8px;background:var(--orange);color:#000;font-weight:700;text-decoration:none}
+.desk-cta::after{content:" →"}
+.desk-cta:hover{filter:brightness(1.1)}
+.desk-demo{background:#050608;border:1px solid var(--panel-line);border-radius:10px;overflow:hidden;font-size:.85rem}
+.demo-bar{display:flex;align-items:center;gap:6px;padding:8px 12px;border-bottom:1px solid var(--panel-line);color:var(--muted);font-size:.75rem}
+.demo-bar i{width:9px;height:9px;border-radius:50%;background:#30363d}
+.demo-bar span{margin-left:8px;font-family:ui-monospace,Menlo,monospace}
+.desk-demo pre{margin:0;padding:14px 16px;overflow-x:auto;line-height:1.7;color:var(--text)}
+.desk-demo .k{color:#e39a58}.desk-demo .n{color:#c9a6e8}.desk-demo .fn{color:#8ec3e3}
+.swap{position:relative;display:inline-grid;border-radius:3px}
+.swap s,.swap u{grid-area:1/1;text-decoration:none;padding:0 2px;border-radius:3px}
+.swap s{color:var(--muted);animation:out 6s infinite}
+.swap u{color:#000;background:var(--orange);font-weight:600;opacity:0;animation:in 6s infinite}
+@keyframes out{0%,35%{opacity:1;background:rgba(222,129,47,.18)}45%,92%{opacity:0}100%{opacity:1}}
+@keyframes in{0%,40%{opacity:0;transform:translateY(4px)}50%,90%{opacity:1;transform:none}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.swap s{animation:none;opacity:0}.swap u{animation:none;opacity:1}}
+.demo-note{display:flex;align-items:center;gap:8px;padding:10px 16px;border-top:1px solid var(--panel-line);color:var(--muted);font-size:.8rem}
+.demo-note b{color:var(--chrome);font-weight:500}
+.demo-note .dn{white-space:nowrap}
+@media (max-width:520px){.demo-note .dn{white-space:normal}.demo-note .dn b{display:block}}
+.demo-note .dot{width:8px;height:8px;border-radius:50%;background:#6cc495;flex:none}
+.desk-stat{margin:14px 0 0;color:var(--muted);font-size:.9rem}.desk-stat b{color:var(--orange);font-weight:700}
+.desk-count{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:12px 0 0;padding:0;list-style:none}
+.desk-count li{padding:12px 16px;border:1px solid var(--panel-line);border-radius:8px;color:var(--muted);font-size:.85rem}
+.desk-count b{display:block;color:var(--text);font-size:1.3rem;font-weight:600}
+@media (max-width:760px){.desk-card{grid-template-columns:1fr;padding:20px}.desk-count{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -147,11 +208,38 @@ footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);color:v
     <nav class="links">
       <a class="primary" href="https://github.com/lombyte-project/lombyte">Source on GitHub</a>
       <a href="https://bytematch.dev/lombyte-project/Lombyte">Progress</a>
+      <span class="links-br" aria-hidden="true"></span>
       <a href="https://github.com/lombyte-project/lombyte/blob/main/CONTRIBUTING.md">Contribute</a>
       <a href="https://discord.gg/XVdFrwKuw">Discord</a>
     </nav>
 </header>
 <main>
+  <section class="desk" aria-labelledby="desk">
+    <div class="desk-card tile">
+      <div class="desk-text">
+        <span class="tag">No coding needed</span>
+        <h2 id="desk"><span style="white-space:nowrap">Know the game?</span><br><span style="white-space:nowrap">Help name its code.</span></h2>
+        <p>Thousands of functions, fields and globals still have placeholder names like <code>FUN_00225c88</code> or <code>unk7C</code>. Play in PCSX2, watch what a value does, and suggest a real name in a minute.</p>
+        <ol class="desk-steps">
+          <li><b>1</b>Pick a name</li>
+          <li><b>2</b>Test in PCSX2</li>
+          <li><b>3</b>Rename it</li>
+          <li><b>4</b>Send an issue</li>
+        </ol>
+        <a class="desk-cta" href="namingdesk/index.html" data-desk>Open the Naming Desk</a>
+        <p class="desk-stat" id="deskStat" hidden></p>
+      </div>
+      <div class="desk-demo" aria-hidden="true">
+        <div class="demo-bar"><i></i><i></i><i></i><span>ui/hud/002661a0.c</span></div>
+        <pre><span class="k">void</span> <span class="fn">init_hud_elem</span>(HudElem *e) {
+    e-&gt;<span class="swap"><s>unk7C</s><u>fade_timer</u></span> = scale_game_frames(<span class="n">0xB4</span>);
+    e-&gt;w = <span class="n">0x80</span>;
+    e-&gt;h = <span class="n">0x80</span>;
+}</pre>
+        <div class="demo-note"><span class="dot"></span><span class="dn">Player's idea: <b>counts down before the icon fades</b></span></div>
+      </div>
+    </div>
+  </section>
 
   <section aria-labelledby="progress">
     <h2 id="progress">Decompilation progress</h2>
@@ -170,7 +258,7 @@ footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);color:v
       <li class="tile"><span class="tag">01 · Goal</span><h3>What is Lombyte?</h3><p>A matching decompilation of Ratchet &amp; Clank for PS2: every function is rewritten in C until the reconstructed compiler produces identical machine code.</p></li>
       <li class="tile"><span class="tag">02 · Legal</span><h3>Does it include the game?</h3><p>No. Lombyte contains no game data, executables or disc images. You need your own copy of the USA release (SCUS_971.99).</p></li>
       <li class="tile"><span class="tag">03 · Future</span><h3>Is this a PC port or a recomp?</h3><p>Not yet. Lombyte is a decompilation, not a recomp: it rebuilds the original source code as C. A native PC port built from that code is the long-term goal.</p></li>
-      <li class="tile"><span class="tag">04 · Join</span><h3>Can I help?</h3><p>Yes. Pick a function, match it and open a pull request. The <a href="https://github.com/lombyte-project/lombyte/blob/main/CONTRIBUTING.md">contributing guide</a> covers the setup.</p></li>
+      <li class="tile"><span class="tag">04 · Join</span><h3>Can I help?</h3><p>Yes. Pick a function, match it and open a pull request; the <a href="https://github.com/lombyte-project/lombyte/blob/main/CONTRIBUTING.md">contributing guide</a> covers the setup. No C? Name things in the <a href="namingdesk/index.html" data-desk>Naming Desk</a>.</p></li>
     </ul>
   </section>
 
@@ -193,20 +281,76 @@ footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);color:v
 {
   const wait = src => new Promise(done => { const i = new Image(); i.onload = i.onerror = done; i.src = src; });
   const show = () => document.documentElement.classList.remove("loading");
+  /* Back from the Desk: the browser or the host may restore the old scroll after load, so keep the page at the top while the veil covers it. */
+  window.holdTop = () => {
+    const h = document.documentElement, top = () => { if (scrollY) scrollTo({top: 0, behavior: "instant"}); }, end = performance.now() + 900;
+    const tick = () => { top(); if (performance.now() < end) requestAnimationFrame(tick); else removeEventListener("scroll", top); };
+    addEventListener("scroll", top); addEventListener("load", top, {once: true}); tick();
+    setTimeout(() => h.classList.remove("back"), 1200);
+  };
+  if (document.documentElement.classList.contains("back")) holdTop();
   Promise.race([Promise.all([wait("hero.jpg"), wait("logo-256.png")]), new Promise(r => setTimeout(r, 3000))]).then(show);
   const map = document.querySelector(".map img"), ready = () => map.classList.add("ready");
   if (map.complete) ready();
   else { map.addEventListener("load", ready); map.addEventListener("error", ready); }
 }
+{
+  const up = document.createElement("button");
+  up.className = "totop"; up.type = "button"; up.title = "Back to the top"; up.setAttribute("aria-label", "Back to the top");
+  up.innerHTML = '<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M9 14V4M4.5 8.5L9 4l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  up.onclick = () => scrollTo({top: 0, behavior: matchMedia("(prefers-reduced-motion:reduce)").matches ? "auto" : "smooth"});
+  document.body.append(up);
+  const check = () => up.classList.toggle("on", scrollY > 400);
+  addEventListener("scroll", check, {passive: true}); check();
+}
+for (const a of document.querySelectorAll("a[data-desk]")) a.addEventListener("click", ev => {
+  if (ev.metaKey || ev.ctrlKey || ev.shiftKey || matchMedia("(prefers-reduced-motion:reduce)").matches) return;
+  ev.preventDefault();
+  const card = document.querySelector(".desk-card"), r = card.getBoundingClientRect(), fly = document.createElement("div");
+  fly.className = "fly";
+  Object.assign(fly.style, {top: r.top + "px", left: r.left + "px", width: r.width + "px", height: r.height + "px"});
+  const copy = card.cloneNode(true); copy.className = "ghostcard"; copy.querySelectorAll("[id]").forEach(x => x.removeAttribute("id")); copy.style.cssText = "padding:28px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:24px;align-items:center";
+  fly.append(copy); document.body.append(fly);
+  card.style.visibility = "hidden";
+  fly.getBoundingClientRect();
+  document.documentElement.classList.add("going");
+  Object.assign(fly.style, {top: "0px", left: "0px", width: "100vw", height: "100vh"}); fly.classList.add("full");
+  try { sessionStorage.setItem("lb.go", "desk"); } catch {}
+  setTimeout(() => location.href = a.href, 700);
+});
+// Names the community already gave: renames in closed `naming` issues (one yaml block each), and those still open.
+// GitHub allows 60 anonymous calls an hour, so the count is kept for 10 minutes.
+(async () => {
+  const el = document.getElementById("deskStat"); if (!el) return;
+  let c = null; try { c = JSON.parse(localStorage.getItem("lb.names") || "null"); } catch {}
+  if (!c || Date.now() - c.t > 6e5) {
+    try {
+      const r = await fetch("https://api.github.com/repos/lombyte-project/lombyte/issues?labels=naming&state=all&per_page=100", {headers: {Accept: "application/vnd.github+json"}});
+      if (r.ok) {
+        const n = b => ((b || "").match(/```yaml/g) || []).length || 1;
+        let done = 0, open = 0;
+        for (const i of await r.json()) { if (i.pull_request) continue; if (i.state === "open") open += n(i.body); else if (i.state_reason === "completed") done += n(i.body); }
+        c = {t: Date.now(), done, open}; try { localStorage.setItem("lb.names", JSON.stringify(c)); } catch {}
+      }
+    } catch {}
+  }
+  if (!c) return;
+  el.innerHTML = `<b>${c.done}</b> ${c.done === 1 ? "name" : "names"} from the community so far` + (c.open ? ` · <b>${c.open}</b> waiting for review` : "");
+  el.hidden = false;
+})();
+addEventListener("pageshow", ev => { if (ev.persisted){ let back = false; try { back = sessionStorage.getItem("lb.go") === "home"; sessionStorage.removeItem("lb.go"); } catch {}
+  if (back){ const h = document.documentElement; h.classList.remove("back"); scrollTo({top: 0, behavior: "instant"}); h.offsetHeight; h.classList.add("back"); holdTop(); }
+  document.documentElement.classList.remove("going"); document.querySelectorAll(".fly").forEach(x => x.remove()); const c = document.querySelector(".desk-card"); if (c) c.style.visibility = ""; } });
 if (matchMedia("(hover:hover) and (pointer:fine)").matches && !matchMedia("(prefers-reduced-motion:reduce)").matches) {
   for (const tile of document.querySelectorAll(".tile")) {
     let frame = 0;
+    const tilt = tile.classList.contains("desk-card") ? 2.5 : 12;
     tile.addEventListener("pointermove", e => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
         const r = tile.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
-        tile.style.setProperty("--ry", (x - .5) * 12 + "deg");
-        tile.style.setProperty("--rx", (.5 - y) * 12 + "deg");
+        tile.style.setProperty("--ry", (x - .5) * tilt + "deg");
+        tile.style.setProperty("--rx", (.5 - y) * tilt + "deg");
         tile.style.setProperty("--gx", x * 100 + "%");
         tile.style.setProperty("--gy", y * 100 + "%");
       });

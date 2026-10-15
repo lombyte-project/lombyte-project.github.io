@@ -1,0 +1,1529 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lombyte Naming Desk</title>
+<meta name="description" content="Know Ratchet &amp; Clank? Click a placeholder name in the Lombyte decompilation, check it in PCSX2 and suggest a real name as a GitHub issue. No coding needed.">
+<link rel="canonical" href="https://lombyte-project.github.io/namingdesk/">
+<link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<meta name="theme-color" content="#000000">
+<script>try{if(sessionStorage.getItem("lb.go")==="desk"){document.documentElement.classList.add("enter");sessionStorage.removeItem("lb.go")}}catch{}</script>
+<style>
+/* Layout: search + tree on the left, the file on the right, a suggestion card that slides up
+   from the bottom when you pick a name. Same palette as lombyte-project.github.io:
+   black page, GitHub-dark panels, one orange. */
+:root{
+  color-scheme:dark;
+  --bg:#000; --panel:#0d1117; --raise:#161b22; --line:#21262d; --hover:#1c2330;
+  --fg:#e8edf5; --soft:#c3cbd8; --dim:#8b93a7; --muted:#a6adc8;
+  --orange:#de812f; --orange-bg:rgba(222,129,47,.13); --orange-line:rgba(222,129,47,.5); --on-orange:#1b1006;
+  --exact:#6cc495; --draft:#e0bd55; --asm:#8e93a6; --warn:#ef8f7f;
+  --kw:#e39a58; --num:#c9a6e8; --str:#a6d68f; --com:#7e8396; --ty:#8ec3e3;
+  --ui:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans",Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --r:8px;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{background:var(--bg);-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--ui);font-size:15px;line-height:1.5}
+button{font:inherit;color:inherit}
+.wrap{max-width:1440px;margin:0 auto;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px));padding-top:max(24px,calc(env(safe-area-inset-top,0px) + 12px));padding-bottom:0;display:flex;flex-direction:column;gap:20px}
+@media (max-width:600px){.wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-top:max(16px,calc(env(safe-area-inset-top,0px) + 12px));gap:16px}}
+header{display:flex;flex-direction:column;gap:6px}
+.title{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap}
+.title #paste{margin-left:auto}
+h1{font-size:22px;line-height:1.3;font-weight:700;margin:0;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
+h1 span{color:var(--orange)}
+.preview{font-size:13px;color:var(--dim)}
+.bug{color:var(--dim);text-decoration:underline dotted;text-underline-offset:3px}
+.bug:hover{color:var(--orange)}
+.lead{margin:0;color:var(--soft);max-width:80ch;text-wrap:balance}
+.lead code,.mono{font-family:var(--mono);font-size:.88em}
+.grid{display:grid;grid-template-columns:300px minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:880px){.grid{grid-template-columns:minmax(0,1fr)}}
+.side{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:8px;display:flex;flex-direction:column;gap:8px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);max-height:calc(100vh - 24px);min-width:0}
+@media (max-width:880px){.side{position:static;max-height:52vh}}
+.search{font:inherit;font-size:14px;line-height:20px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 12px;width:100%}
+.search::placeholder,input::placeholder{color:var(--dim)}
+:focus-visible{outline:2px solid var(--orange);outline-offset:1px}
+.list{overflow:auto;min-height:0;flex:1;display:flex;flex-direction:column}
+.grp{font-size:12px;color:var(--dim);padding:12px 8px 4px}
+.node{all:unset;box-sizing:border-box;width:100%;display:flex;gap:8px;align-items:center;min-height:28px;padding:0 8px;border-radius:6px;cursor:pointer;white-space:nowrap;min-width:0;font-family:var(--mono);font-size:13px}
+.node:hover{background:var(--hover)}
+.node:focus-visible{outline:2px solid var(--orange);outline-offset:-2px}
+.node[aria-current="true"]{background:var(--orange-bg);color:var(--fg)}
+.node .nm{overflow:hidden;text-overflow:ellipsis}
+.node .tw{color:var(--dim);width:12px;flex:none;text-align:center;font-family:var(--ui);font-size:11px}
+.node.dir{color:var(--soft)}
+.node .hint{color:var(--dim);font-family:var(--ui);font-size:12px;margin-left:auto;flex:none}
+.kids{padding-left:6px;margin-left:13px;border-left:1px solid var(--line)}
+.bar{display:inline-flex;height:5px;width:30px;border-radius:3px;overflow:hidden;background:var(--line);flex:none;margin-left:auto}
+.bar i{display:block}
+.key{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12px;color:var(--dim);padding:8px 8px 0;border-top:1px solid var(--line)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:0}
+/* The sheet fills the screen: the code scrolls, the card under it is always shown whole. */
+.sheet{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);min-width:0;display:flex;flex-direction:column;overflow:hidden}
+@media (min-width:881px){.wrap{height:100dvh;padding-bottom:24px}.grid{flex:1;min-height:0;align-items:stretch}.side{position:static;max-height:none;min-height:0}.sheet{min-height:0}}
+.bar-top{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;min-height:52px;padding:8px 8px 8px 16px;border-bottom:1px solid var(--line)}
+.crumbs{font-family:var(--mono);font-size:13px;word-break:break-all;color:var(--soft)}
+.crumbs b{color:var(--fg);font-weight:600}
+.acts{display:flex;gap:6px;flex-wrap:wrap}
+.btn{all:unset;cursor:pointer;font-size:13px;line-height:20px;padding:6px 12px;border-radius:7px;color:var(--soft);background:var(--raise)}
+.btn:hover{color:var(--fg);background:var(--hover)}
+.btn:focus-visible{outline:2px solid var(--orange)}
+.code{overflow-x:auto;font-family:var(--mono);font-variant-ligatures:none;font-size:13px;line-height:22px;padding-block:12px;min-height:120px;flex:1;overflow:auto;position:relative}
+.row{display:grid;grid-template-columns:3px 45px minmax(0,1fr);min-width:max-content;content-visibility:auto;contain-intrinsic-size:auto 22px}
+.row.hit{background:rgba(222,129,47,.06)}
+/* The line you jumped to glows for a moment. */
+.row.flash{animation:flash 1.6s ease-out}
+@keyframes flash{0%,25%{background:rgba(222,129,47,.32);box-shadow:inset 3px 0 0 var(--orange)}100%{background:transparent;box-shadow:inset 3px 0 0 transparent}}
+@media (prefers-reduced-motion:reduce){.row.flash{animation:none;background:rgba(222,129,47,.2)}}
+.ln{color:var(--dim);text-align:right;padding-right:16px;user-select:none;font-variant-numeric:tabular-nums;opacity:.8}
+.src{white-space:pre;padding-right:18px}
+.id{cursor:pointer;border-radius:3px}
+.id:hover{background:var(--hover);text-decoration:underline dotted var(--orange-line);text-underline-offset:3px}
+.id.on{background:var(--orange-bg);color:var(--fg);text-decoration:underline solid var(--orange);text-underline-offset:3px}
+.inc{cursor:pointer;text-decoration:underline dotted var(--dim);text-underline-offset:3px}
+.k{color:var(--kw)} .t{color:var(--ty)} .nu{color:var(--num)} .s{color:var(--str)} .c{color:var(--com);font-style:italic} .pp{color:var(--soft)}
+.msg{padding:30px 20px;color:var(--soft);max-width:66ch;display:flex;flex-direction:column;gap:8px}
+.msg h3{color:var(--fg);margin:0;font-size:17px}
+.msg a{color:var(--orange)}
+.card{position:sticky;bottom:0;z-index:2;background:var(--raise);border-radius:12px 12px 0 0;box-shadow:0 -12px 32px rgba(0,0,0,.5);padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:16px;flex:none;border-top:2px solid var(--orange)}
+.card > *{margin:0}
+.sheet{position:relative}
+/* The card slides (transform only, so it stays smooth): folded, only its head and one line of facts show. */
+.card{position:absolute;left:0;right:0;bottom:0;will-change:transform}
+.grip{position:absolute;left:0;right:0;top:-8px;height:18px;cursor:ns-resize;touch-action:none;z-index:1}
+.grip::after{content:"";position:absolute;left:50%;top:10px;width:44px;height:4px;margin-left:-22px;border-radius:2px;background:var(--line);transition:background .15s}
+.grip:hover::after,.grip:active::after{background:var(--orange)}
+.card.min{cursor:pointer;transform:translateY(var(--off,0))}
+/* Opened, the card never grows past the code pane: its body scrolls instead. */
+.card{max-height:calc(100% - 16px)}
+.cwrap{min-height:0;display:flex;flex-direction:column;flex:1 1 auto}
+.cbody{min-height:0;padding:3px;margin:-3px;display:flex;flex-direction:column;gap:16px;overflow:auto;overscroll-behavior:contain}
+@media (max-width:880px){.card{position:fixed;z-index:5;max-height:85dvh}.totop{bottom:calc(var(--cardh,0px) + 24px + env(safe-area-inset-bottom,0px))}.cwrap{flex:1}.cbody{overflow:auto}}
+.peek{display:flex;flex-wrap:wrap;gap:4px 20px;font-size:13px;color:var(--dim)}
+.peek code{font-family:var(--mono);font-size:12.5px;color:var(--soft)}
+.peek .ok{color:var(--exact)}.peek .or{color:var(--orange)}
+.card:not(.min) .head{cursor:pointer}
+.x.tog{color:var(--orange)}
+@media (prefers-reduced-motion:reduce){.cwrap{transition:none}}
+@media (max-width:880px){.sheet{overflow:visible}.code{flex:none;max-height:60vh}}
+.head{display:flex;gap:12px;align-items:center;min-height:32px}
+.head h2{margin:0;font-size:16px;font-weight:600;line-height:24px;flex:1;min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px}
+.head h2 code{font-family:var(--mono);font-size:.95em;color:var(--orange);word-break:break-all}
+.pill{display:inline-block;font-size:12px;line-height:20px;padding:0 8px;border-radius:6px;background:var(--orange-bg);color:var(--orange);font-weight:500}
+.x{all:unset;cursor:pointer;color:var(--soft);font-size:13px;line-height:20px;padding:6px 12px;border-radius:7px;flex:none;background:var(--panel)}
+.x:hover{color:var(--fg);background:var(--hover)}
+.x:focus-visible{outline:2px solid var(--orange)}
+.dhead .x{border:1px solid var(--line);background:none}
+.dhead .x:focus:not(:focus-visible){outline:none}
+.where{background:var(--panel);border:1px solid var(--line);border-radius:10px}
+.addr{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;padding:16px}
+.addr .lbl{font-size:12px;line-height:16px;color:var(--dim);margin-bottom:6px}
+.vrow{display:flex;align-items:center;gap:8px}
+.lvsel{font:inherit;font-size:12px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:0 4px;width:auto;margin-left:4px}
+.v{font-family:var(--mono);font-size:22px;line-height:36px;font-weight:600;color:var(--fg);letter-spacing:.02em}
+.ghost{all:unset;box-sizing:border-box;cursor:pointer;height:36px;padding:0 14px;display:inline-flex;align-items:center;border-radius:8px;border:1px solid var(--line);font-size:13px;font-weight:500;color:var(--soft)}
+.ghost:hover{color:var(--fg);background:var(--hover)}
+.ghost:disabled{opacity:.4;cursor:default;background:none}
+.ghost:focus-visible{outline:2px solid var(--orange)}
+/* PS2 blue, as on the console's start screen */
+.how{all:unset;box-sizing:border-box;cursor:pointer;height:36px;padding:0 16px;display:inline-flex;align-items:center;border-radius:8px;background:linear-gradient(120deg,#0b1f6b,#1d4fc4 45%,#3f8cf0 75%,#1d4fc4) 0 0/220% 100%;color:#fff;font-size:13px;font-weight:600;box-shadow:inset 0 0 0 1px rgba(140,190,255,.35),0 2px 12px rgba(40,110,230,.25);transition:background-position .6s ease,box-shadow .3s ease}
+.how:hover{background-position:100% 0;box-shadow:inset 0 0 0 1px rgba(170,210,255,.55),0 2px 18px rgba(60,140,255,.4)}
+.how:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
+.note{margin:0;padding:12px 16px;border-top:1px solid var(--line);font-size:13px;line-height:20px;color:var(--soft)}
+.small{font-size:13px;color:var(--soft)}
+.faint{font-size:12.5px;color:var(--dim)}
+.steps{margin:4px 0 0;padding:12px 0 0 24px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px;font-size:14px;max-width:88ch}
+.steps li::marker{color:var(--orange);font-weight:700}
+.steps b{font-weight:600}
+.steps code{font-family:var(--mono);font-size:.9em;color:var(--fg)}
+.chipcopy{all:unset;cursor:pointer;font-family:var(--mono);font-size:13px;background:var(--bg);padding:0 7px;border-radius:5px;color:var(--fg)}
+.chipcopy:hover{background:var(--hover)}
+.chipcopy::after{content:" ⧉";color:var(--orange);font-family:var(--ui)}
+.chipcopy:focus-visible{outline:2px solid var(--orange)}
+.facts{display:flex;flex-wrap:wrap;gap:4px 24px;font-size:13px;color:var(--dim)}
+.facts code{font-family:var(--mono);font-size:12.5px;color:var(--soft)}
+details.uses{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:12px 0}
+.uload{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:12px 0;font-size:14px;color:var(--soft)}
+.uload .spin{width:14px;height:14px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--orange);animation:spin .8s linear infinite}
+.uload i{flex-basis:100%;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--raise) 0,var(--hover) 50%,var(--raise) 100%) 0 0/200% 100%;animation:shim 1.2s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes shim{to{background-position:-200% 0}}
+@media (prefers-reduced-motion:reduce){.uload .spin,.uload i{animation-duration:3s}}
+details.uses summary{cursor:pointer;font-size:14px;color:var(--fg)}
+details.uses summary .faint{margin-left:12px}
+details.uses ul{list-style:none;margin:8px 0 0;padding:0;font-family:var(--mono);font-size:12px;display:flex;flex-direction:column;max-height:190px;overflow:auto}
+details.uses li button{all:unset;cursor:pointer;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;color:var(--soft);padding:2px 6px;border-radius:5px}
+details.uses li button:hover{background:var(--hover);color:var(--fg)}
+details.uses li b{color:var(--orange);font-weight:400}
+.form{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);gap:12px 16px}
+.form .full{grid-column:1/-1}
+@media (max-width:720px){.form{grid-template-columns:minmax(0,1fr)}}
+label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--soft)}
+*{-webkit-tap-highlight-color:transparent}
+input,select{font:inherit;font-size:14px;line-height:20px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 12px;width:100%}
+input.nn{font-family:var(--mono)}
+.send-row{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
+.send{display:inline-block;background:var(--orange);color:var(--on-orange);font-weight:700;text-decoration:none;line-height:20px;padding:10px 18px;border-radius:8px;font-size:14px}
+.send:hover{filter:brightness(1.08)}
+.send[aria-disabled="true"]{opacity:.38;pointer-events:none}
+.send:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.bad{color:var(--warn);font-size:13px}
+.bad:empty{display:none}
+.drawer{position:fixed;top:0;right:0;bottom:0;z-index:6;width:min(480px,100vw);background:var(--panel);border-left:1px solid var(--line);box-shadow:-16px 0 40px rgba(0,0,0,.5);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .2s ease-out}
+.drawer.in{transform:none}
+@media (prefers-reduced-motion:reduce){.drawer{transition:none}}
+.dhead{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;padding:calc(16px + env(safe-area-inset-top,0px)) 20px 16px;border-bottom:1px solid var(--line)}
+.dhead h2{margin:0;font-size:17px;line-height:24px}
+.dhead code{font-family:var(--mono);color:var(--orange)}
+.dbody{overflow:auto;flex:1;padding:20px}
+.sgrp{margin:8px 0 0;font-size:12px;line-height:16px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+.sgrp:first-child{margin-top:0}
+.step{display:grid;grid-template-columns:24px minmax(0,1fr);gap:12px;font-size:14px;line-height:21px}
+.sn{width:24px;height:24px;border-radius:50%;background:var(--orange-bg);color:var(--orange);font-size:12px;font-weight:700;display:grid;place-items:center}
+.step p{margin:1px 0 10px}
+.step code{font-family:var(--mono);font-size:.9em;color:var(--fg)}
+.tell{margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:4px;color:var(--soft)}
+.dbody{display:flex;flex-direction:column;gap:20px}
+.dfoot{padding:12px 20px calc(12px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line)}
+.pic{display:block;width:100%;height:auto;font-family:var(--ui)}
+.pic .pw{fill:var(--bg);stroke:var(--line)} .pic .pbar{fill:var(--raise)} .pic .pb{fill:var(--raise)} .pic .pp{fill:#090c10;stroke:var(--line)}
+.pic .pl{fill:var(--line)} .pic .pm{fill:var(--raise);stroke:#30363d}
+.pic .ph{fill:var(--orange-bg);stroke:var(--orange);stroke-width:1.5}
+.pic text{font-size:10px} .pic .pt{fill:var(--soft)} .pic .pd{fill:var(--dim)} .pic .ps{fill:var(--dim);font-size:10px} .pic .pht{fill:var(--orange);font-weight:600}
+.bulk{margin:2px 8px 6px;font-size:12px!important}
+.ghost.sm{height:auto;min-height:32px;padding:4px 10px;font-size:13px;text-align:left}
+.dform{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.dtop{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.dtop label,.askl > span{display:flex;flex-direction:row;align-items:center;gap:8px;font-size:14px;color:var(--fg)}
+.dtop select{width:auto;padding:4px 8px;font-size:13px}
+.ans{display:flex;flex-direction:column;gap:6px;padding:12px 16px;border-left:3px solid var(--orange);background:var(--bg);border-radius:0 8px 8px 0}
+.ans .head{font-size:16px;font-weight:600;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.ans .more{font-size:13px;line-height:20px;color:var(--soft)}
+.ans .wh{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;color:var(--soft)}
+.dask{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+.dask:empty{display:none}
+.askl{display:flex;flex-direction:column;gap:8px}
+.drow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.dres{margin-top:16px}
+.cand{display:inline-flex;align-items:center;gap:8px;margin-right:12px}
+textarea{font-family:var(--mono);font-size:13px;line-height:20px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 12px;width:100%;resize:vertical}
+.dres{display:flex;flex-direction:column;gap:12px;font-size:14px;line-height:21px}
+.dres:empty{display:none}
+.dres p{margin:0}
+.dres code{font-family:var(--mono);font-size:.9em}
+.fnhit{display:flex;flex-direction:column;gap:6px;padding:12px 16px;border:1px solid var(--line);border-radius:10px}
+.fnhit .lbl{font-size:12px;color:var(--dim)}
+.fnhit .vrow{flex-wrap:wrap}
+.ins{font-family:var(--mono);font-size:14px;padding:8px 12px;background:var(--bg);border-radius:8px}
+.picks{display:flex;flex-wrap:wrap;gap:8px}
+.linkish{all:unset;cursor:pointer;font-family:var(--mono);font-size:12.5px;color:var(--soft);text-decoration:underline dotted;text-underline-offset:3px}
+.home{color:var(--fg);text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.home img{width:30px;height:30px;transition:transform .3s ease}
+.home:hover img{transform:rotate(-8deg) scale(1.06)}
+.bk{all:unset;cursor:pointer;margin-left:auto;display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:8px;border:1px solid var(--line);font-size:13px;color:var(--soft)}
+.bk:hover{color:var(--fg);border-color:var(--soft)}
+.bk b{min-width:20px;height:20px;padding:0 6px;border-radius:10px;display:inline-grid;place-items:center;background:var(--raise);color:var(--dim);font-size:12px}
+.bk.has b{background:var(--orange);color:var(--on-orange)}
+.bk:focus-visible{outline:2px solid var(--orange)}
+.tabs{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:3px;background:var(--bg);border:1px solid var(--line);border-radius:8px}
+.tabs::before{content:"";position:absolute;top:3px;bottom:3px;left:3px;width:calc(50% - 5px);border-radius:6px;background:var(--raise);transition:transform .3s cubic-bezier(.16,1,.3,1)}
+.tabs.q::before{transform:translateX(calc(100% + 4px))}
+.tab{all:unset;position:relative;cursor:pointer;text-align:center;font-size:13px;line-height:20px;padding:5px 8px;border-radius:6px;color:var(--dim);font-weight:600;transition:color .2s}
+.tab[aria-selected="true"]{color:var(--fg)}
+.tab:focus-visible{outline:2px solid var(--orange)}
+.qf{display:flex;flex-wrap:wrap;gap:6px}
+.chip{all:unset;cursor:pointer;font-size:12px;line-height:18px;padding:3px 10px;border-radius:12px;border:1px solid var(--line);color:var(--soft)}
+.chip[aria-pressed="true"]{border-color:var(--orange);color:var(--orange);background:var(--orange-bg)}
+.chip:disabled{opacity:.35;cursor:not-allowed}
+.chip:focus-visible{outline:2px solid var(--orange)}
+.badge{flex:none;font-family:var(--ui);font-size:11px;line-height:16px;padding:0 6px;border-radius:4px}
+.badge.bi{background:var(--orange-bg);color:var(--orange)}
+.badge.mv{background:rgba(108,196,149,.14);color:var(--exact)}
+.badge.ic{background:var(--raise);color:var(--dim)}
+.data{display:flex;flex-direction:column;gap:4px;padding:10px 16px;border:1px solid var(--line);border-radius:8px;background:var(--raise);font-size:13px;color:var(--soft)}
+.data{min-width:0}
+.data .drow{display:flex;flex-wrap:wrap;gap:4px 18px;color:var(--dim);min-width:0}
+.data .drow > span{min-width:0;overflow-wrap:anywhere}
+.data .drow b{color:var(--fg);font-weight:600}
+.data .st{font-weight:600}.data .st.ok{color:var(--exact)}.data .st.no{color:var(--orange)}
+.data code{font-family:var(--mono);font-size:12.5px;color:var(--soft);word-break:break-all}
+.data label.mv{flex-direction:row;align-items:center;gap:8px;cursor:pointer;color:var(--fg);font-size:13px;margin-left:auto}
+.data label.mv input{accent-color:var(--orange);width:16px;height:16px}
+.badge.sent{background:rgba(108,196,149,.14);color:var(--exact)}
+.node.done .nm{color:var(--dim)}
+.idea{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 16px;padding:12px 16px;border:1px solid var(--orange-line);border-radius:8px;background:var(--orange-bg)}
+.idea .lbl{font-size:12px;color:var(--dim)}
+.idea code{font-family:var(--mono);font-size:15px;color:var(--fg);font-weight:600}
+.idea .cheats{font-size:14px;color:var(--fg);line-height:1.6}
+.sentnote{padding:10px 16px;border-radius:8px;background:rgba(108,196,149,.1);color:var(--soft);font-size:13px}
+.sentnote a{color:var(--exact)}
+.sentnote code{font-family:var(--mono)}
+.rec{font-family:var(--mono);font-size:14px;color:var(--fg)}
+.tryrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-bottom:8px}
+.tryrow select{width:auto}
+#tcrc{max-width:200px}
+#tpn{margin-top:8px}
+.where .acts{display:flex;gap:8px;flex-wrap:wrap}
+.bitem{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line)}
+.bitem code{font-family:var(--mono);font-size:13px}
+.bitem .faint{margin-top:2px}
+.bempty{color:var(--soft);font-size:14px}
+/* Arriving from the homepage: the orange glow the card grew into fades while the desk rises in. */
+html.enter body::before{content:"";position:fixed;inset:0;z-index:50;pointer-events:none;background:radial-gradient(ellipse 90% 70% at 50% 0%,rgba(222,129,47,.28),rgba(0,0,0,0) 70%),#000;animation:veil .75s cubic-bezier(.4,0,.2,1) .05s both}
+html.enter header,html.enter .side,html.enter .sheet{animation:rise .8s cubic-bezier(.16,1,.3,1) both}
+html.enter header{animation-delay:.12s} html.enter .side{animation-delay:.22s} html.enter .sheet{animation-delay:.3s}
+@keyframes veil{to{opacity:0}}
+@keyframes rise{from{opacity:0;transform:translateY(24px) scale(.985);filter:blur(8px)}}
+html.leave .wrap{transition:opacity .35s ease,transform .35s ease,filter .35s ease;opacity:0;transform:scale(.98);filter:blur(6px)}
+@media (prefers-reduced-motion:reduce){html.enter body::before{display:none}html.enter header,html.enter .side,html.enter .sheet{animation:none}}
+.welcome{position:fixed;inset:0;z-index:60;display:grid;place-items:center;padding:16px;background:rgba(0,0,0,.72);backdrop-filter:blur(6px);animation:wfade .3s ease}
+.wbox{width:min(560px,100%);max-height:calc(100dvh - 32px);overflow:auto;padding:28px;border:1px solid var(--orange-line);border-radius:12px;background:linear-gradient(135deg,rgba(222,129,47,.12),var(--panel) 55%);box-shadow:0 24px 64px rgba(0,0,0,.6);animation:wrise .45s cubic-bezier(.16,1,.3,1)}
+.wbox h2{margin:6px 0 12px;font-size:22px;line-height:1.3}
+.wbox p{margin:0 0 12px;color:var(--soft);font-size:15px;line-height:1.6}
+.wbox code{font-family:var(--mono);font-size:.88em;color:var(--fg)}
+.wbox .wnote{padding-top:12px;border-top:1px solid var(--line);font-size:14px;color:var(--muted)}
+.wbox a{color:var(--orange)}
+.wbox .send{display:flex;border:0;cursor:pointer;margin:8px 0 0 auto}
+.wtag{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--orange)}
+@keyframes wfade{from{opacity:0}}
+@keyframes wrise{from{opacity:0;transform:translateY(16px) scale(.98)}}
+@media (prefers-reduced-motion:reduce){.welcome,.wbox{animation:none}}
+.toast{position:fixed;right:max(24px,env(safe-area-inset-right,0px));top:calc(72px + env(safe-area-inset-top,0px));z-index:7;display:flex;align-items:center;gap:12px;max-width:calc(100vw - 32px);padding:10px 10px 10px 14px;background:var(--raise);border:1px solid var(--line);border-left:3px solid var(--orange);border-radius:10px;box-shadow:0 16px 40px rgba(0,0,0,.6);color:var(--fg);font-size:14px;line-height:20px;animation:tin .22s cubic-bezier(.16,1,.3,1)}
+.toast .ti{flex:none;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;background:var(--orange-bg);color:var(--orange)}
+.toast .tm{padding-right:4px}
+.toast:not(:has(.tb)){padding-right:16px}
+.toast .tb{all:unset;cursor:pointer;flex:none;padding:4px 10px;border-radius:6px;font-size:13px;font-weight:600;color:var(--orange)}
+.toast .tb:hover{background:var(--orange-bg)}
+.toast .tb:focus-visible{outline:2px solid var(--orange)}
+@keyframes tin{from{opacity:0;transform:translateY(-8px)}}
+.totop{position:fixed;right:max(24px,env(safe-area-inset-right,0px));bottom:calc(24px + env(safe-area-inset-bottom,0px));z-index:4;width:44px;height:44px;border-radius:50%;border:0;background:var(--orange);color:#000;display:grid;place-items:center;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.5);opacity:0;transform:translateY(8px);pointer-events:none;transition:opacity .2s,transform .2s,border-color .2s}
+.totop.on{opacity:1;transform:none;pointer-events:auto}
+.totop:hover{filter:brightness(1.12)}
+.totop:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){.toast{animation:none}}
+@media (prefers-reduced-motion:no-preference){.card{transition:transform .32s cubic-bezier(.16,1,.3,1)}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="title"><h1><a class="home" id="home" href="../index.html" title="Back to the Lombyte homepage"><img src="../logo-256.png" alt="" width="30" height="30">Lombyte</a> <span>Naming Desk</span></h1><span class="preview">preview · <code class="mono" id="commit">…</code> · <a class="bug" id="bug" href="#" target="_blank" rel="noopener">Report a bug</a></span><button class="bk" id="basketBtn" type="button" aria-controls="drawer">Draft issue <b id="bcount">0</b></button></div>
+    <p class="lead">Know what something in the game code really does? Click its name, type a better one and send it as a GitHub issue. Any file, function, struct, field or global in <code>src/</code> or <code>include/</code> can be renamed.</p>
+  </header>
+  <div class="grid">
+    <nav class="side" aria-label="Files and names">
+      <div class="tabs" role="tablist" aria-label="Browse by"><button class="tab" role="tab" id="tabFiles" type="button" aria-selected="true">Files</button><button class="tab" role="tab" id="tabQueue" type="button" aria-selected="false">To name</button></div>
+      <div class="qf" id="qf" hidden><button type="button" class="chip" data-k="" aria-pressed="true">All</button><button type="button" class="chip" data-k="f" aria-pressed="false">Functions</button><button type="button" class="chip" data-k="g" aria-pressed="false">Data</button><button type="button" class="chip" data-k="d" aria-pressed="false">Fields</button><button type="button" class="chip" id="ideaOnly" aria-pressed="false" title="Functions with a name idea from the repo, and data that public cheat codes write">Has an idea</button><button type="button" class="chip" id="moveOnly" aria-pressed="false" title="Data only one file reads: moving it into that file makes it count as data in C. Biggest first.">Ready to move</button></div>
+      <input class="search" id="q" type="search" placeholder="Search a file or a name…" autocomplete="off" spellcheck="false" aria-label="Search a file or a name">
+      <div class="list" id="list"></div>
+      <div class="key" id="key"><span><i class="dot" style="background:var(--exact)"></i>matches the game</span><span><i class="dot" style="background:var(--draft)"></i>C draft</span><span><i class="dot" style="background:var(--asm)"></i>still assembly</span></div>
+    </nav>
+    <main class="sheet">
+      <div class="bar-top"><span class="crumbs" id="path">Loading…</span>
+        <span class="acts"><button class="btn" id="renfile" type="button">Rename file</button><button class="btn" id="rendir" type="button">Rename folder</button><a class="btn" id="gh" target="_blank" rel="noopener">GitHub ↗</a></span></div>
+            <div class="code" id="code"></div>
+      <section class="card" id="card" hidden aria-live="polite"></section>
+    </main>
+  </div>
+</div>
+<aside class="drawer" id="drawer" hidden aria-label="How to check it in PCSX2">
+  <div class="dhead"><div><h2>Check it in PCSX2</h2><div class="faint" id="dsub"></div></div><button class="x" id="dclose" type="button">Close</button></div>
+  <div class="dbody" id="dbody"></div>
+  <div class="dfoot faint" id="dfoot"></div>
+</aside>
+<div class="welcome" id="welcome" hidden>
+  <div class="wbox" role="dialog" aria-modal="true" aria-labelledby="wtitle">
+    <div class="wtag">Preview</div>
+    <h2 id="wtitle">Welcome to the Naming Desk</h2>
+    <p>Ratchet &amp; Clank shipped with no names in its code. Thousands of functions and variables are still called things like <code>FUN_001f96f8</code> or <code>unk7C</code>, and each real name has to be found by hand.</p>
+    <p>You can help. Pick a name, watch what it does in PCSX2 and suggest a better one. Each suggestion becomes a ready-to-apply GitHub issue.</p>
+    <p class="wnote">This is a preview, so things may still change. Spotted a bug or have an idea? Use <a href="#" id="wbug">Report a bug</a> at the top of the page.</p>
+    <button class="send" type="button" id="wgo">Start naming</button>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+<button class="totop" id="totop" type="button" aria-label="Back to the top" title="Back to the top"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M9 14V4M4.5 8.5L9 4l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const KW = new Set('if else for while do return switch case break continue default goto sizeof static extern const volatile struct union typedef enum inline register'.split(' '));
+const TY = new Set('void int char short long float double unsigned signed u8 u16 u32 u64 s8 s16 s32 s64 f32 f64 b32 vs8 vu8 vs16 vu16 vs32 vu32 vs64 vu64'.split(' '));
+const COMPILER = new Set('__asm__ asm __attribute__ attribute section aligned alias packed unused noreturn __volatile__ __inline__ defined include define ifdef ifndef endif elif undef pragma NULL TRUE FALSE'.split(' '));
+const COLOR = {exact:'var(--exact)', draft:'var(--draft)', asm:'var(--asm)'};
+const WHAT = {field:'Field', type:'Struct', function:'Function', global:'Global', local:'Local name', macro:'Macro', name:'Name', file:'File', folder:'Folder'};
+const FILEOF = {};
+let IDX, QD = null, cache = {}, cur = null, el = null, uses = null, allLoaded = null, fileT = null;
+/* Saved in this browser so a reload keeps the draft issue and half-typed names. */
+const store = {get(k, d){ try { const v = localStorage.getItem('ndesk.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v){ try { localStorage.setItem('ndesk.' + k, JSON.stringify(v)); } catch {} }};
+let FULL = false, BASKET = store.get('basket', []), DRAFTS = store.get('drafts', {}), MODE = store.get('mode', 'files'), QK = '', IDEA = false, MOVE = false;
+const SENT = new Map();
+
+async function gunzip(u){
+  if (u[0] === 0x1f && u[1] === 0x8b){
+    const s = new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip'));
+    return JSON.parse(await new Response(s).text());
+  }
+  return JSON.parse(new TextDecoder().decode(u));
+}
+async function load(name){
+  const r = await fetch('t/' + name + '.txt'); if (!r.ok) throw new Error('HTTP ' + r.status);
+  const b = atob((await r.text()).trim()), u = new Uint8Array(b.length);
+  for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i);
+  return gunzip(u);
+}
+const bundle = key => cache[key] ??= load(key);
+async function text(path){ const f = IDX.byPath[path]; return f && f.b ? (await bundle(f.b))[path] : null; }
+const breath = () => new Promise(r => (window.scheduler && scheduler.yield) ? scheduler.yield().then(r) : setTimeout(r, 0));
+/* Fetch and unpack every bundle one by one in the background, so later clicks find the code ready. */
+const loadAll = () => allLoaded ??= (async () => { for (const k of [...new Set(IDX.files.filter(f => f.b).map(f => f.b))]){ await bundle(k); await breath(); } })();
+const loadAllOld = () => allLoaded ??= Promise.all([...new Set(IDX.files.filter(f => f.b).map(f => f.b))].map(bundle));
+function toast(m, act){
+  const t = $('toast');
+  t.innerHTML = `<span class="ti" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M2.5 6.2l2.3 2.3 4.7-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="tm"></span>${act ? '<button class="tb" type="button"></button>' : ''}`;
+  t.querySelector('.tm').textContent = m;
+  if (act){ const b = t.querySelector('.tb'); b.textContent = act.label; b.onclick = () => { t.hidden = true; act.fn(); }; }
+  t.hidden = true; void t.offsetWidth; t.hidden = false;
+  clearTimeout(toast.h); toast.h = setTimeout(() => t.hidden = true, act ? 3500 : 1700);
+}
+const hex = (n, w = 8) => '0x' + n.toString(16).toUpperCase().padStart(w, '0');
+const SN = k => k.split('@')[0];
+const plural = (n, a, b) => n + ' ' + (n === 1 ? a : b);
+
+const open = new Set(['src']);
+function buildTree(){
+  const root = {d:{}, f:[]};
+  for (const f of IDX.files){ let n = root; const parts = f.p.split('/'); for (const p of parts.slice(0, -1)) n = n.d[p] ??= {d:{}, f:[]}; n.f.push(f); }
+  return root;
+}
+function stat(node){
+  if (node._s) return node._s;
+  const s = [0,0,0];
+  for (const f of node.f) if (f.st) f.st.forEach((v,i) => s[i] += v);
+  for (const k in node.d) stat(node.d[k]).forEach((v,i) => s[i] += v);
+  return node._s = s;
+}
+function bar(s){ const n = s[0]+s[1]+s[2]; if (!n) return ''; return `<span class="bar" title="${s[0]} match, ${s[1]} draft, ${s[2]} assembly">` + ['exact','draft','asm'].map((k,i) => s[i] ? `<i style="width:${s[i]/n*100}%;background:${COLOR[k]}"></i>` : '').join('') + '</span>'; }
+function renderList(){
+  if (MODE === 'queue') return renderQueue();
+  const q = $('q').value.trim(), ql = q.toLowerCase();
+  if (q){
+    const files = IDX.files.filter(f => f.p.toLowerCase().includes(ql)).slice(0, 80);
+    const names = q.length < 2 ? [] : IDX.names.filter(n => n.toLowerCase().includes(ql)).sort((a,b) => (a.toLowerCase().indexOf(ql) - b.toLowerCase().indexOf(ql)) || a.length - b.length).slice(0, 40);
+    let h = '';
+    if (names.length) h += '<div class="grp">Names</div>' + names.map(n => `<button class="node" data-n="${esc(n)}"><span class="nm mono">${esc(n)}</span><span class="hint">${nameKind(n)}</span></button>`).join('');
+    if (files.length) h += '<div class="grp">Files</div>' + files.map(f => `<button class="node" data-f="${esc(f.p)}" aria-current="${cur===f.p}" title="${esc(f.p)}"><span class="nm">${esc(f.p.replace(/^src\//,''))}</span>${f.st?bar(f.st):''}</button>`).join('');
+    $('list').innerHTML = h || '<div class="grp">Nothing found. Try part of a name, like <span class="mono">hud</span>.</div>';
+    return;
+  }
+  const walk = (node, path) => {
+    let h = '';
+    for (const k of Object.keys(node.d).sort()){
+      const p = path ? path + '/' + k : k, o = open.has(p);
+      h += `<button class="node dir" data-d="${esc(p)}" aria-expanded="${o}"><span class="tw">${o?'▾':'▸'}</span><span class="nm">${esc(k)}</span>${bar(stat(node.d[k]))}</button>`;
+      if (o) h += `<div class="kids">${walk(node.d[k], p)}</div>`;
+    }
+    for (const f of [...node.f].sort((a,b) => a.p < b.p ? -1 : 1))
+      h += `<button class="node" data-f="${esc(f.p)}" aria-current="${cur===f.p}"><span class="tw"></span><span class="nm">${esc(f.p.split('/').pop())}</span>${f.st?bar(f.st):''}</button>`;
+    return h;
+  };
+  $('list').innerHTML = walk(IDX.tree, '');
+}
+function nameKind(n){ return IDX.structs[n] || IDX.typedefs.has(n) || IDX.names.structSet.has(n) ? 'struct' : IDX.fnames.has(n) || IDX.afn.has(n) ? 'function' : 'global'; }
+$('list').addEventListener('click', e => {
+  if (e.target.closest('#bulk')) return addBulk();
+  const b = e.target.closest('.node'); if (!b) return;
+  if (b.dataset.d){ const p = b.dataset.d; open.has(p) ? open.delete(p) : open.add(p); renderList(); }
+  else if (b.dataset.f) openFile(b.dataset.f);
+  else if (b.dataset.n) jumpToName(b.dataset.n);
+  else if (b.dataset.qk) openQueue(b.dataset.qk, b.dataset.qn);
+});
+$('q').addEventListener('input', renderList);
+/* "To name": names that are still FUN_/D_/unk, most used first, so one new name clears the most code. */
+const qName = it => it[0] === 'd' ? SN(it[1].slice(0, it[1].lastIndexOf('.'))) + '.' + it[1].slice(it[1].lastIndexOf('.') + 1) : it[1];
+const ideaOf = w => QD && (QD.sugg[w] || QD.sugg[IDX.alias[w]]);
+/* Public cheat codes for the US game that write this global: [[title, offset, bytes], ...] */
+const cheatsOf = w => QD && QD.cheat && (QD.cheat[w] || QD.cheat[IDX.alias[w]]);
+const hasIdea = it => it[0] === 'f' ? ideaOf(it[1]) : it[0] === 'g' && cheatsOf(it[1]);
+/* Data facts per global: [region, in C, size, reader files, reader count]. Only bytes a proof checks count
+   (docs/progress-metrics.md), so a name alone moves nothing; moving data its one reader owns does. */
+const dataOf = w => QD && QD.data && (QD.data[w] || QD.data[IDX.alias[w]]);
+const isBss = d => /bss/.test(d[0]);
+/* d[5] is what the game code shows (every load, store and address of it): 'ok' = only that one file's code touches it. */
+const movable = d => !!d && !d[1] && !isBss(d) && d[4] === 1 && d[5] === 'ok' && (/^level (\d\d)/.test(d[0]) ? d[3][0].startsWith('src/overlays/l' + d[0].slice(6) + '/') : !d[3][0].startsWith('src/overlays/'));
+const REGION = {'core.data':'boot data','.data':'boot data','core.rdata':'boot read-only data','core.lit':'boot constants (.lit)','.lit':'boot constants (.lit)','core.bss':'boot bss','.bss':'boot bss','lvl.vtbl':'level class table','lvl.camvtbl':'level camera table','lvl.sndvtbl':'level sound table'};
+const regionName = r => REGION[r] || (r.startsWith('level ') ? 'level ' + r.slice(6) + ' data' : r);
+function renderQueue(){
+  if (!QD){ $('list').innerHTML = '<div class="grp">Loading the list…</div>'; return; }
+  const ql = $('q').value.trim().toLowerCase();
+  let all = QD.queue.filter(it => (!QK || it[0] === QK) && (!IDEA || hasIdea(it)) && (!MOVE || it[0] === 'g' && movable(dataOf(it[1]))) && (!ql || qName(it).toLowerCase().includes(ql)));
+  if (MOVE) all = all.slice().sort((a, b) => (dataOf(b[1])[2] || 0) - (dataOf(a[1])[2] || 0) || b[2] - a[2]);
+  const open = all.filter(it => !SENT.has(qName(it))), done = all.filter(it => SENT.has(qName(it)));
+  const rows = [...open, ...done].slice(0, 150);
+  const kind = {f:'function', g:'global', d:'field'};
+  const bulk = bulkPicks(all); renderQueue.bulk = bulk;
+  $('list').innerHTML = `<div class="grp">${all.length.toLocaleString('en')} names, ${MOVE ? 'biggest first' : 'most used first'}</div>`
+    + (bulk.length ? `<button class="ghost sm bulk" id="bulk" type="button" title="${MOVE ? 'Each one moves into its only reader' : 'Uses the name idea shown on each one'}">Add ${bulk.length.toLocaleString('en')} to draft issue</button>` : '') + rows.map(it => {
+    const n = qName(it), sent = SENT.has(n), idea = hasIdea(it), d = it[0] === 'g' && dataOf(it[1]), mv = movable(d);
+    const badge = sent ? '<span class="badge sent">sent</span>' : idea ? '<span class="badge bi">idea</span>' : mv ? '<span class="badge mv">1 file</span>' : d && d[1] ? '<span class="badge ic">in C</span>' : '';
+    const tip = `${kind[it[0]]} · used ${it[2]} times` + (d ? ` · ${regionName(d[0])}${d[2] ? ', ' + d[2] + ' bytes' : ''}${d[1] ? ', in C' : ''}${mv ? ', only ' + d[3][0] + ' reads it' : ''}` : '');
+    return `<button class="node${sent ? ' done' : ''}" data-qk="${it[0]}" data-qn="${esc(it[1])}" title="${esc(tip)}"><span class="nm">${esc(n)}</span>${badge}<span class="hint">${MOVE ? (d[2] ? d[2] + ' B' : '') : it[2]}</span></button>`;
+  }).join('') + (all.length > 150 ? '<div class="grp">Search to see more.</div>' : '');
+}
+/* Names the list can add in one go: a name idea from the repo, or (Ready to move) data that keeps its name and moves. */
+function bulkPicks(all){
+  const inB = new Set(BASKET.map(b => b.key)), out = [];
+  for (const it of all){
+    if (it[0] === 'd' || SENT.has(qName(it))) continue;
+    const w = it[1], e = {kind: it[0] === 'f' ? 'function' : 'global', word: w, name: w};
+    if (inB.has(elKey(e))) continue;
+    const rn = realName(w), i = it[0] === 'f' && ideaOf(w), mv = MOVE && movable(dataOf(w));
+    let nn = rn || (i && i[0] !== w ? i[0] : null);
+    if (nn && valid(e, nn)) nn = null;
+    if (!nn && !mv) continue;
+    const why = rn ? `Other files already call it ${rn}.` : nn ? `Idea from the repo (${i[1]}${i[2] ? ', ' + i[2] : ''}), not checked in the game yet.` : `Only ${dataOf(w)[3][0]} reads it.`;
+    out.push({e, nn: nn || w, why, mv});
+  }
+  return out;
+}
+/* Fill the draft issue from the list, as many as one GitHub issue link holds. */
+async function addBulk(){
+  const b = $('bulk'), picks = renderQueue.bulk || []; if (!picks.length || addBulk.on) return;
+  addBulk.on = true; b.disabled = true; b.textContent = 'Finding every place…';
+  await loadAll(); let n = 0;
+  for (const p of picks){
+    const x = spec(p.e, p.nn, p.why, await findUses(p.e), p.mv);
+    if (issueURL([...BASKET, x]).length >= 7800) break;
+    BASKET.push(x); n++;
+  }
+  store.set('basket', BASKET); basketCount(); addBulk.on = false; renderList();
+  const left = picks.length - n;
+  toast(n ? `Added ${plural(n, 'name', 'names')} to the draft issue` + (left ? `. It is full: send it, then add the other ${left.toLocaleString('en')}` : '') : 'The draft issue is full. Send it first.', {label: `Open (${BASKET.length})`, fn: openBasket});
+}
+function setMode(m){
+  MODE = m; store.set('mode', m);
+  $('tabFiles').setAttribute('aria-selected', m === 'files'); $('tabQueue').setAttribute('aria-selected', m === 'queue');
+  $('qf').hidden = m !== 'queue'; $('key').hidden = m === 'queue';
+  $('q').placeholder = m === 'queue' ? 'Filter the list…' : 'Search a file or a name…';
+  const was = $('tabFiles').parentNode.classList.contains('q'); $('tabFiles').parentNode.classList.toggle('q', m === 'queue');
+  renderList();
+  if (setMode.on && was !== (m === 'queue') && !matchMedia('(prefers-reduced-motion: reduce)').matches){
+    const dx = m === 'queue' ? 12 : -12, ease = 'cubic-bezier(.16,1,.3,1)';
+    $('list').animate([{opacity: 0, transform: `translateX(${dx}px)`}, {opacity: 1, transform: 'none'}], {duration: 280, easing: ease});
+    if (m === 'queue') $('qf').animate([{opacity: 0}, {opacity: 1}], {duration: 280, easing: ease});
+  }
+}
+$('tabFiles').onclick = () => setMode('files');
+$('tabQueue').onclick = () => setMode('queue');
+$('qf').addEventListener('click', ev => {
+  const b = ev.target.closest('.chip'); if (!b || b.disabled) return;
+  /* Fields have no ideas and only data moves: a toggle that would show nothing for the picked kind is greyed out. */
+  if (b.id === 'ideaOnly'){ IDEA = !IDEA; if (IDEA) MOVE = false; }
+  else if (b.id === 'moveOnly'){ MOVE = !MOVE; if (MOVE){ IDEA = false; QK = 'g'; } }
+  else { QK = b.dataset.k; if (QK === 'd') IDEA = false; if (QK === 'd' || QK === 'f') MOVE = false; }
+  chipState(); renderList();
+});
+function chipState(){
+  $('qf').querySelectorAll('[data-k]').forEach(x => x.setAttribute('aria-pressed', x.dataset.k === QK));
+  $('ideaOnly').setAttribute('aria-pressed', IDEA); $('moveOnly').setAttribute('aria-pressed', MOVE);
+  $('ideaOnly').disabled = QK === 'd'; $('moveOnly').disabled = QK === 'd' || QK === 'f';
+  $('ideaOnly').title = QK === 'd' ? 'Fields have no name ideas yet' : 'Functions with a name idea from the repo, and data that public cheat codes write';
+  $('moveOnly').title = QK === 'd' || QK === 'f' ? 'Only data can move' : 'Data only one file reads: moving it into that file makes it count as data in C. Biggest first.';
+}
+async function openGlobal(n){
+  const g = QD && QD.gloc && QD.gloc[n];
+  if (g){ await openFile(g[0], g[1]); return select({kind:'global', word:n}); }
+  await loadAll();
+  const re = new RegExp('\\b' + n + '\\b'); let hit = null;
+  for (const f of IDX.files){ if (!f.b) continue; const t = (await bundle(f.b))[f.p].t; if (!t.includes(n)) continue; const i = t.split('\n').findIndex(l => re.test(l)); if (i >= 0 && (!hit || /extern/.test(t.split('\n')[i]) && f.p.endsWith('.h'))){ hit = [f.p, i + 1]; if (f.p.endsWith('.h')) break; } }
+  if (hit) await openFile(hit[0], hit[1]);
+  select({kind:'global', word:n});
+}
+async function openQueue(k, n){
+  if (k === 'f') return jumpToName(n);
+  if (k === 'g') return openGlobal(n);
+  const i = n.lastIndexOf('.'), key = n.slice(0, i), fld = n.slice(i + 1), s = IDX.structs[key], fd = s && s.f.find(x => x[0] === fld);
+  if (!s) return;
+  await openFile(s.p, fd && fd[2]);
+  const c = structsWithField(fld); select({kind:'field', word:fld, cands:c, pick:Math.max(0, c.findIndex(x => x[0] === key))});
+}
+async function jumpToName(n){
+  const key = IDX.structs[n] ? n : Object.keys(IDX.structs).find(k => SN(k) === n);
+  if (key){ const s = IDX.structs[key]; await openFile(s.p, s.l); return select({kind:'type', word:n, key}); }
+  const at = IDX.defs[n], k = nameKind(n);
+  if (!at && k === 'global') return openGlobal(n);
+  if (at) await openFile(at[0], at[1]);
+  select(k === 'struct' ? {kind:'type', word:n} : {kind: k === 'function' ? 'function' : 'global', word:n});
+}
+
+function ids(s, word){ let out = '', last = 0, m; const re = /[A-Za-z_]\w*/g; while ((m = re.exec(s))){ out += esc(s.slice(last, m.index)) + span(m[0], word); last = re.lastIndex; } return out + esc(s.slice(last)); }
+const span = (w, word, extra = '') => `<span class="id${extra}${w===word?' on':''}">${w}</span>`;
+function hl(line, isC, word){
+  const inc = /^(\s*#\s*include\s*)(["<])([^">]+)([">])(.*)$/.exec(line);
+  if (inc) return `<span class="pp">${esc(inc[1] + inc[2])}<span class="inc" data-inc="${esc(inc[3])}">${esc(inc[3])}</span>${esc(inc[4] + inc[5])}</span>`;
+  if (!isC) return ids(line, word);
+  if (/^\s*#/.test(line)) return '<span class="pp">' + ids(line, word) + '</span>';
+  const re = /(\/\*.*?\*\/|\/\*.*$|^\s*\*.*$|\/\/.*$)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|\b(0x[0-9A-Fa-f]+|\d+(?:\.\d+)?f?)\b|([A-Za-z_]\w*)/g;
+  let out = '', last = 0, m;
+  while ((m = re.exec(line))){
+    out += esc(line.slice(last, m.index)); last = re.lastIndex;
+    if (m[1]) out += '<span class="c">' + esc(m[1]) + '</span>';
+    else if (m[2]) out += '<span class="s">' + esc(m[2]) + '</span>';
+    else if (m[3]) out += '<span class="nu">' + m[3] + '</span>';
+    else if (KW.has(m[4])) out += '<span class="k">' + m[4] + '</span>';
+    else out += span(m[4], word, TY.has(m[4]) ? ' t' : '');
+  }
+  return out + esc(line.slice(last));
+}
+function crumbs(p){ const parts = p.split('/'); return esc(parts.slice(0, -1).join('/') + '/') + '<b>' + esc(parts.pop()) + '</b>'; }
+async function openFile(path, line){
+  if (path === cur && fileT && fileT === FILEOF[path]){ jumpTo(line); return; }
+  cur = path; store.set('file', path); if (MODE === 'files') renderList();
+  const f = IDX.byPath[path];
+  $('path').innerHTML = crumbs(path);
+  $('gh').href = `https://github.com/${IDX.repo}/blob/${IDX.commit}/${path}` + (line ? `#L${line}` : '');
+  if (!f.b){ fileT = null; $('code').innerHTML = `<div class="msg"><h3>${f.bin ? 'This is a binary file' : 'This file is too big to show here'}</h3><span>You can still rename or move it with the buttons above, or <a href="https://github.com/${IDX.repo}/blob/${IDX.commit}/${esc(path)}" target="_blank" rel="noopener">read it on GitHub</a>.</span></div>`; return; }
+  $('code').innerHTML = '<div class="msg">Opening the file…</div>';
+  const t = await text(path); if (cur !== path) return;
+  fileT = FILEOF[path] = t; renderCode(line);
+}
+/* The file is drawn once when it opens; picking a name only toggles classes on the spans that hold it. */
+let WORDS = null;
+function renderCode(line){
+  if (!fileT) return;
+  const isC = /\.(c|h)$/.test(cur), L = fileT.t.replace(/\n$/, '').split('\n');
+  const stripe = new Array(L.length).fill('transparent');
+  (fileT.f || []).forEach(fn => { for (let i = fn.s; i <= fn.e && i <= L.length; i++) stripe[i-1] = COLOR[fn.k]; });
+  $('code').innerHTML = L.map((l, i) => `<div class="row" id="L${i+1}"><span style="background:${stripe[i]}"></span><span class="ln">${i+1}</span><span class="src">${hl(l, isC, null) || ' '}</span></div>`).join('');
+  WORDS = null; markWord(); jumpTo(line);
+}
+function jumpTo(line){
+  const r = line && $('L' + line), c = $('code'); if (!r) return;
+  c.scrollTop = r.offsetTop - 66;
+  r.classList.remove('flash'); void r.offsetWidth; r.classList.add('flash');
+}
+function markWord(){
+  const c = $('code');
+  c.querySelectorAll('.id.on').forEach(x => x.classList.remove('on')); c.querySelectorAll('.row.hit').forEach(x => x.classList.remove('hit'));
+  const w = el && el.word; if (!w || !fileT) return;
+  if (!WORDS){ WORDS = new Map(); for (const sp of c.querySelectorAll('.id')){ const k = sp.textContent; (WORDS.get(k) || WORDS.set(k, []).get(k)).push(sp); } }
+  const scope = el.kind === 'local' ? (el.path === cur ? el.range : [0, -1]) : null;
+  for (const sp of WORDS.get(w) || []){
+    const row = sp.parentNode.parentNode, n = +row.id.slice(1);
+    if (scope && (n < scope[0] || n > scope[1])) continue;
+    sp.classList.add('on'); row.classList.add('hit');
+  }
+}
+$('code').addEventListener('click', e => {
+  const inc = e.target.closest('.inc');
+  if (inc){ const p = resolveInclude(inc.dataset.inc); if (p) openFile(p); else toast('That header is not in src/ or include/'); return; }
+  const s = e.target.closest('.id'); if (!s) return;
+  const row = s.closest('.row'), ln = +row.id.slice(1), src = row.querySelector('.src');
+  classify(s.textContent, src.textContent.slice(0, offsetIn(src, s)), ln);
+});
+function resolveInclude(p){ const dir = cur.split('/').slice(0, -1).join('/'); return [`include/${p}`, `${dir}/${p}`, `src/${p}`].find(x => IDX.byPath[x]); }
+function offsetIn(root, node){ let n = 0; const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT); while (w.nextNode()){ if (node.contains(w.currentNode)) return n; n += w.currentNode.length; } return n; }
+$('renfile').onclick = () => cur && select({kind:'file', name:cur});
+$('rendir').onclick = () => cur && select({kind:'folder', name:cur.split('/').slice(0, -1).join('/')});
+
+/* field name -> [[struct key, offset, line]], built once */
+let FIELDS = null;
+function fieldIndex(){ if (!FIELDS){ FIELDS = new Map(); for (const [n, s] of Object.entries(IDX.structs)) for (const f of s.f) (FIELDS.get(f[0]) || FIELDS.set(f[0], []).get(f[0])).push([n, f[1], f[2]]); } return FIELDS; }
+function structsWithField(w){ return (fieldIndex().get(w) || []).map(c => [...c]); }
+function enclosing(ln){ return (fileT && fileT.f || []).find(f => ln >= f.s && ln <= f.e); }
+function classify(w, before, ln){
+  if (COMPILER.has(w) || IDX.infra.has(w)) return select({kind:'macro', word:w, infra:true});
+  const hit = (fieldIndex().get(w) || []).find(c => IDX.structs[c[0]].p === cur && c[2] === ln), inStruct = hit ? [hit[0]] : null;
+  if (/(->|\.)\s*$/.test(before) || inStruct){
+    const cands = structsWithField(w);
+    if (cands.length){
+      let pick = inStruct ? cands.findIndex(c => c[0] === inStruct[0]) : -1;
+      if (pick < 0) pick = guessStruct(cands, ln);
+      return select({kind:'field', word:w, cands, pick});
+    }
+  }
+  if (IDX.structs[w + '@' + cur]) return select({kind:'type', word:w, key:w + '@' + cur});
+  if (IDX.structs[w] || IDX.typedefs.has(w)) return select({kind:'type', word:w, key:w});
+  const aliasHere = IDX.alias[w] && new RegExp('\\b' + w + '\\b[^;]*__asm__\\s*\\(\\s*"').test(fileT ? fileT.t : '');
+  if (IDX.fnames.has(w) || (aliasHere && IDX.afn.has(w))) return select({kind:'function', word:w});
+  if (IDX.addr[w] != null || /^(?:FUN_|func_|D_|jtbl_|lbl_)[0-9A-Fa-f]/.test(w) || aliasHere) if (addressOf(w) != null) return select({kind:'global', word:w});
+  if (IDX.macros[w]) return select({kind:'macro', word:w});
+  const fn = enclosing(ln);
+  if (fn) return select({kind:'local', word:w, fn:fn.n, path:cur, range:[fn.s, fn.e]});
+  select({kind:'name', word:w});
+}
+function guessStruct(cands, ln){
+  const i = cands.findIndex(c => IDX.structs[c[0]].p === cur); if (i >= 0) return i;
+  const L = fileT.t.split('\n'), fn = enclosing(ln), lo = fn ? fn.s : Math.max(1, ln - 40);
+  const src = L.slice(lo - 1, ln).join('\n');
+  const j = cands.findIndex(c => new RegExp('\\b' + SN(c[0]) + '\\b').test(src)); return j >= 0 ? j : 0;
+}
+function addressOf(w){
+  let a = IDX.addr[w]; const al = IDX.alias[w];
+  if (a == null && al) a = IDX.addr[al];
+  for (const n of [w, al]) if (a == null && n){ const m = /^(?:FUN_(?:L\d\d_)?|func_|D_|jtbl_|lbl_)([0-9A-Fa-f]{8})$/.exec(n); if (m) a = parseInt(m[1], 16); }
+  return a;
+}
+/* Levels copy their own build of the game over memory from 0x15EF00 up (docs/overlays.md); below it stays resident. */
+const RESIDENT_END = 0x15EF00;
+let LV = ''; try { LV = localStorage.getItem('ndesk.lvl') || ''; } catch {}
+function setLV(v){ LV = v; try { localStorage.setItem('ndesk.lvl', v); } catch {} }
+function placesOf(w){
+  if (!IDX.places){ IDX.places = {}; for (const f of IDX.fmap) if (f[3]) (IDX.places[f[2]] ??= []).push([f[3], f[0]]); for (const k in IDX.places) IDX.places[k].sort(); }
+  return IDX.places[w] || IDX.places[IDX.alias[w]] || [];
+}
+/* Where a function or global sits for the level the reader plays (LV), and what to tell them about it. */
+function where(w){
+  const base = addressOf(w), pl = placesOf(w), fn = IDX.fnames.has(w) || IDX.afn.has(w) || /^FUN_/.test(w);
+  if (pl.length){
+    const lv = pl.some(x => x[0] === LV) ? LV : pl[0][0], a = pl.find(x => x[0] === lv)[1], exe = base != null && !/^FUN_L\d\d_/.test(IDX.alias[w] || w);
+    const note = exe ? `Each level carries its own copy of this game code, at its own address. This is the address in level ${lv}${base >= RESIDENT_END ? `; before the first level loads it is at ${hex(base)}` : ''}.`
+      : pl.length > 1 ? `Level code: ${pl.length} levels have it, each at its own address. This is the address in level ${lv}.` : `Level ${lv} code, loaded only in that level.`;
+    return {a, lv, pl, note};
+  }
+  if (base == null) return {a: null};
+  if (base < RESIDENT_END) return {a: base, note: `Resident ${fn ? 'code' : 'data'}: always at this address, in every level.`};
+  return {a: base, boot: true, note: fn ? 'Start-up code. Levels replace this part of memory and none of them has a copy of it, so it only exists until the first level loads.'
+    : 'Data of the start-up program. When a level loads, this part of memory is replaced by the level\'s own copy, which can sit at a different address.'};
+}
+
+async function select(e){
+  if (e !== el) FULL = false;  /* a new pick opens small, so the code stays in view */
+  el = e; uses = null;
+  if (e.kind === 'field') e.name = SN(e.cands[e.pick][0]) + '.' + e.word;
+  else if (!e.name) e.name = e.word;
+  renderCard(); markWord();
+  if (e.infra) return;
+  if (e.kind === 'local'){ uses = localUses(e); renderCard(); return; }
+  await loadAll(); if (el !== e) return;
+  const r = e.kind === 'file' || e.kind === 'folder' ? await pathUses(e) : await findUses(e);
+  if (el === e){ uses = r; renderCard(); }
+}
+function localUses(e){
+  const L = fileT.t.split('\n'), re = new RegExp('\\b' + e.word + '\\b'), list = [];
+  for (let i = e.range[0]; i <= e.range[1]; i++) if (re.test(L[i-1] || '')) list.push([cur, i, L[i-1].trim().slice(0, 140)]);
+  return {list, files: 1};
+}
+const USES = new Map();
+async function findUses(e){
+  const ck = e.kind + ':' + e.word + ':' + (e.kind === 'field' ? e.cands[e.pick][0] : '');
+  if (USES.has(ck)) return USES.get(ck);
+  const r = await findUsesRaw(e); USES.set(ck, r); return r;
+}
+async function findUsesRaw(e){
+  const re = e.kind === 'field' ? new RegExp('(->|\\.)\\s*' + e.word + '\\b') : new RegExp('\\b' + e.word + '\\b');
+  const sn = e.kind === 'field' ? e.cands[e.pick][0] : null, list = []; let files = 0;
+  let t0 = performance.now();
+  for (const f of IDX.files){
+    if (!f.b) continue;
+    if (performance.now() - t0 > 8){ await breath(); t0 = performance.now(); }
+    const B = (await bundle(f.b))[f.p]; if (!B.t.includes(e.word)) continue;
+    if (sn && e.cands.length > 1 && !new RegExp('\\b' + SN(sn) + '\\b').test(B.t)) continue;
+    const L = B.t.split('\n'), enc = n => (B.f || []).find(x => n >= x.s && n <= x.e);
+    let hit = false;
+    L.forEach((l, i) => { if (re.test(l)){ const fn = enc(i+1); list.push([f.p, i+1, l.trim().slice(0, 140), fn ? fn.n : null]); hit = true; } });
+    if (sn && IDX.structs[sn].p === f.p){ const dl = e.cands[e.pick][2]; if (dl && !list.some(x => x[0] === f.p && x[1] === dl)){ list.push([f.p, dl, (L[dl-1] || '').trim()]); hit = true; } }
+    if (hit) files++;
+  }
+  return {list, files};
+}
+async function pathUses(e){
+  const n = e.name, base = n.split('/').pop(), stem = n.replace(/^(src|include)\//, '').replace(/\.[ch]$/, '');
+  const list = []; let files = 0;
+  for (const f of IDX.files){
+    if (!f.b || f.p === n) continue;
+    const t = (await bundle(f.b))[f.p].t; if (!t.includes(stem) && !t.includes(base)) continue;
+    let hit = false;
+    t.split('\n').forEach((l, i) => { if (l.includes(stem) || (n.endsWith('.h') && l.includes(base))){ list.push([f.p, i+1, l.trim().slice(0, 140)]); hit = true; } });
+    if (hit) files++;
+  }
+  return {list, files};
+}
+
+const copyChip = v => `<button class="chipcopy" type="button" data-copy="${v}" title="Copy">${v}</button>`;
+function heading(e){
+  const c = s => `<code>${esc(s)}</code>`;
+  switch (e.kind){
+    case 'field': return `<span class="pill">Field</span>${c(e.word)} in struct ${c(SN(e.cands[e.pick][0]))}`;
+    case 'type': return `<span class="pill">Struct</span>${c(e.word)}`;
+    case 'function': return `<span class="pill">Function</span>${c(e.word)}`;
+    case 'global': return `<span class="pill">Global</span>${c(e.word)}`;
+    case 'local': return `<span class="pill">Local name</span>${c(e.word)} inside ${c(e.fn)}`;
+    case 'macro': return `<span class="pill">Macro</span>${c(e.word)}`;
+    case 'file': return `<span class="pill">File</span>${c(e.name)}`;
+    case 'folder': return `<span class="pill">Folder</span>${c(e.name)}`;
+    default: return `<span class="pill">Name</span>${c(e.word)}`;
+  }
+}
+const val = (l, v, c) => `<div><div class="lbl">${l}</div><div class="vrow"><span class="v">${v}</span><button class="ghost" type="button" data-copy="${c}">Copy</button></div></div>`;
+function whereBlock(e){
+  let big, sub;
+  if (e.kind === 'function' || e.kind === 'global'){
+    const w = where(e.word); if (w.a == null) return '';
+    const lbl = w.pl && w.pl.length > 1 ? `Address in level <select class="lvsel" id="lvsel" aria-label="Level">${w.pl.map(x => `<option${x[0] === w.lv ? ' selected' : ''}>${x[0]}</option>`).join('')}</select>` : w.lv ? `Address in level ${w.lv}` : 'Address in the US game';
+    big = val(lbl, hex(w.a), hex(w.a));
+    sub = w.note;
+  } else if (e.kind === 'field'){
+    const off = e.cands[e.pick][1]; if (off == null) return '';
+    const home = fixedHome(e);
+    if (home){ big = val(`Address (${esc(home[2])} + ${hex(off, 1)})`, hex(home[1] + off), hex(home[1] + off)); sub = 'This struct has one copy at a fixed place.'; }
+    else { big = val('Offset inside ' + esc(SN(e.cands[e.pick][0])), '+' + hex(off, 1), hex(off, 1));
+    sub = 'Objects are created while the game runs, so a field has no fixed address. The steps show how to find one.'; }
+  } else return '';
+  const tryb = e.kind === 'global' || e.kind === 'field' && e.cands[e.pick][1] != null && fixedHome(e) ? `<button class="ghost" id="trybtn" type="button" aria-controls="drawer">Try a value in the game</button>` : '';
+  return `<div class="where"><div class="addr">${big}<span class="acts">${tryb}<button class="how" id="how" type="button" aria-controls="drawer">Check it in PCSX2</button></span></div><p class="note">${sub}</p></div>`;
+}
+function probe(){
+  if (!uses || !uses.list) return null;
+  const ok = uses.list.filter(x => x[3] && where(x[3]).a != null);
+  return ok.find(x => x[0] === cur && where(x[3]).lv === LV) || ok.find(x => where(x[3]).lv === LV) || ok.find(x => x[0] === cur) || ok[0] || null;
+}
+/* What a value is, from its C type: {ty, z total bytes, el bytes of one element, n elements, flt, st struct key}. */
+const FLT = /^(f32|float|f64|double)$/;
+function vinfo(ty, z, el){
+  const S = ty && IDX.structs[ty]; el = S && S.z || el || z; z = z || el;
+  return {ty, z, el, n: el && z ? Math.max(1, Math.round(z / el)) : 1, flt: FLT.test(ty || ''), st: S ? ty : null};
+}
+function ginfo(w){ const g = IDX.gtype[w] || IDX.gtype[IDX.alias[w]], d = dataOf(w); return vinfo(g && g[0], (d && d[2]) || (g && !g[2] ? g[1] : null), g && g[1]); }
+function finfo(e){ const f = IDX.structs[e.cands[e.pick][0]].f.find(x => x[0] === e.word) || []; return vinfo(f[3], f[4], f[5]); }
+/* Read-only data never changes while the game runs: catch who reads it instead. */
+const readOnly = w => { const d = dataOf(w); return !!d && /rdata|rodata|\.lit|vtbl/.test(d[0]); };
+const LE = {1:'1E', 2:'1E 00', 4:'1E 00 00 00', 8:'1E 00 00 00 00 00 00 00'};
+function readStep(v, a){
+  const C = copyChip;
+  if (v.st){
+    const S = IDX.structs[v.st], fl = S.f.filter(f => f[1] != null).slice(0, 4).map(f => `<li><code>+${hex(f[1], 1)}</code> ${esc(f[0])}${f[3] ? ` <span class="faint">${esc(f[3])}${f[4] ? ', ' + f[4] + ' B' : ''}</span>` : ''}</li>`).join('');
+    return [`<code>${esc(SN(v.st))}</code>${v.n > 1 ? ` × ${v.n}` : ''}, ${v.el} bytes${v.n > 1 ? ' each' : ''}. First fields:<ul class="tell">${fl}</ul>Pick one: ${typeof a === 'string' && a.startsWith('0x') ? C(a) : a} + its offset.`, null];
+  }
+  const what = v.flt ? `<code>${esc(v.ty)}</code>, ${v.el} bytes` : v.ty ? `<code>${esc(v.ty)}</code>, ${plural(v.el || 4, 'byte', 'bytes')}` : v.el > 8 ? `${v.el} bytes, type not known yet; start with the first 4` : `Type not known yet, ${plural(v.el || 4, 'byte', 'bytes')}`, many = v.n > 1 ? `, ${v.n} in a row` : '';
+  if (v.flt) return [`${what}${many}. Paste its 4 bytes to read the number:<div class="tryrow"><input id="fconv" class="nn" value="00 00 80 3F" autocomplete="off" spellcheck="false" aria-label="4 bytes from Memory"><code class="rec" id="fout">1</code></div>`, pic('value', {bytes:'00 00 80 3F', val:'float 1.0'})];
+  const b = LE[v.el] || LE[4];
+  return [`${what}${many}. Read back to front: <code>${b}</code> = 30.`, pic('value', {bytes:b, val:'0x1E = 30'})];
+}
+function watchStep(v){
+  const li = v.flt ? ['moves smoothly while you walk or turn: a <b>position</b>, <b>angle</b> or <b>speed</b>', 'counts down or up in small steps: a <b>timer</b> in seconds', 'jumps between 0 and 1.0: a <b>switch</b> or <b>fade</b>']
+    : ['goes down or up by the same step: a <b>timer</b> or <b>counter</b>', 'jumps between 0 and 1: a <b>flag</b>', 'a big number like <code>0012A3C0</code>: a <b>pointer</b> to an object', 'follows a button you press: <b>input</b>'];
+  return ['Play and watch it change:<ul class="tell">' + li.map(x => '<li>' + x + '</li>').join('') + '</ul>', null];
+}
+function bpStep(a, z, ro, shown = copyChip(a), st){
+  if (st) return [`<b>Breakpoints</b> → right-click → <b>New</b> → <b>Memory</b>. Address ${shown} + the field's offset, size = the field's bytes, tick <b>${ro ? 'Read' : 'Write'}</b>.`, pic('bp', {a: a + ' + 0x…', exec:false, size:'…', read:ro})];
+  return [`<b>Breakpoints</b> → right-click → <b>New</b> → <b>Memory</b>. Address ${shown}, size ${copyChip(String(z))}, tick <b>${ro ? 'Read' : 'Write'}</b>.`, pic('bp', {a, exec:false, size:z, read:ro})];
+}
+const hitStep = ro => [`Play. The game freezes when ${ro ? 'code reads it' : 'something writes it'}. What just happened on screen is the clue. Press <b>Run</b> and repeat to be sure.`, pic('stopped', {run:true})];
+/* The register that holds the object in a function that takes it as a parameter: a0 for the first, a1 for the second... */
+async function fieldProbe(e){
+  const st = SN(e.cands[e.pick][0]), seen = new Set(), list = (uses && uses.list) || [];
+  for (const u of list){
+    const fn = u[3]; if (!fn || seen.has(fn) || where(fn).a == null) continue; seen.add(fn); if (seen.size > 40) break;
+    const d = IDX.defs[fn], t = d && await text(d[0]); if (!t) continue;
+    const head = t.t.split('\n').slice(d[1] - 1, d[1] + 4).join(' ').split('{')[0], m = /\(([^)]*)\)/.exec(head); if (!m) continue;
+    const i = m[1].split(',').findIndex(p => new RegExp('\\b' + st + '\\b').test(p) && p.includes('*'));
+    if (i >= 0 && i < 4) return {fn, reg: 'a' + i};
+  }
+  const p = probe(); return p ? {fn: p[3], reg: null} : null;
+}
+function steps(e, fp){
+  const s = [], C = copyChip, B = t => `<h3 class="sgrp">${t}</h3>`;
+  const home = e.kind === 'field' && fixedHome(e);
+  const lv = (e.kind === 'field' ? (home ? where(home[0]) : fp ? where(fp.fn) : {}) : where(e.word)).lv || (/^(?:D|FUN)_L(\d\d)_/.exec(e.word || '') || [])[1];
+  const cleanup = ['Done? Delete the breakpoint (right-click it in <b>Breakpoints</b>) so the game stops freezing.', null];
+  s.push(B('Get ready'));
+  s.push([`Run the <b>US</b> game (SCUS-97199) in PCSX2, then <b>Debug → Open Debugger</b>.${lv ? ` Play until level ${lv} is loaded.` : ''}`, pic('open')]);
+  /* Resident code and data (boot, the hero) are the same in every level: only per-level ones get a level file. */
+  const sl = lv, sym = f => `<a href="sym/${f}.sym" target="_blank" rel="noopener" download>${f}.sym</a>`;
+  s.push([`Optional: to see Lombyte's names in the debugger, add ${sym('boot')}${sl ? ` and ${sym('level-' + sl)} (load condition ${C('[0x15ED84]==0x' + (+sl).toString(16))})` : ''} as ${sl ? 'symbol files' : 'a symbol file'} in the debugger's analysis settings.`, null]);
+  if (e.kind === 'function'){
+    const a = hex(where(e.word).a);
+    s.push([`<b>Breakpoints</b> → right-click → <b>New</b> → <b>Execute</b>, address ${C(a)}.`, pic('bp', {a, exec:true})]);
+    s.push(B('Catch it'));
+    s.push(['Play. The game freezes when this function runs. What were you doing (jumping, breaking a crate, opening a menu)? That is the clue.', pic('stopped', {cur:a})]);
+    s.push(['Press <b>Run</b>. Freezes again at once, every time: it runs every frame (updates or draws something). Only on some events: it handles that event.', pic('stopped', {cur:a, run:true})]);
+    s.push(['Optional: <b>Registers</b> <code>a0</code>–<code>a3</code> are what it was given; <b>Step Out</b> shows who called it.', pic('regs')]);
+    s.push(cleanup);
+  } else if (e.kind === 'global'){
+    const a = hex(where(e.word).a), v = ginfo(e.word), ro = readOnly(e.word);
+    s.push([`<b>Memory</b> → right-click → <b>Go to Address</b> → ${C(a)}.`, pic('goto', {a})]);
+    s.push(B('Read it'));
+    s.push(readStep(v, a));
+    if (ro) s.push(['This data is read-only: it never changes while the game runs, so find out who reads it.', null]);
+    else s.push(watchStep(v));
+    s.push(B(ro ? 'Catch who reads it' : 'Catch what changes it'));
+    s.push(bpStep(a, !v.ty && v.z > 8 ? 4 : v.z || 4, ro, undefined, v.st)); s.push(hitStep(ro)); s.push(cleanup);
+  } else {
+    const off = e.cands[e.pick][1], v = finfo(e);
+    if (off == null){ s.push(['This field has no known offset yet, so it cannot be found in memory. Pick a field with an offset.', null]); return render(s); }
+    if (home){
+      const a = hex(home[1] + off);
+      s.push([`<b>Memory</b> → right-click → <b>Go to Address</b> → ${C(a)}. That is <code>${esc(home[2])}</code> + ${hex(off, 1)}: this struct has one copy at a fixed place.`, pic('goto', {a})]);
+      s.push(B('Read it')); s.push(readStep(v, a)); s.push(watchStep(v));
+      s.push(B('Catch what changes it')); s.push(bpStep(a, v.el || 4, false, undefined, v.st)); s.push(hitStep(false)); s.push(cleanup);
+      return tail(s, lv);
+    }
+    if (fp){ const a = hex(where(fp.fn).a); s.push([`<b>Breakpoints</b> → right-click → <b>New</b> → <b>Execute</b>, address ${C(a)}. That is <code>${esc(srcName(fp.fn))}</code>, which ${fp.reg ? `gets the <code>${esc(SN(e.cands[e.pick][0]))}</code> in <code>${fp.reg}</code>` : 'uses this field'}.`, pic('bp', {a, exec:true})]); }
+    else s.push(['Add an <b>Execute</b> breakpoint on a function that uses this field (see "Used in" on the card).', null]);
+    s.push(B('Find one object'));
+    s.push(['Play until the game freezes on it.', pic('stopped', fp ? {cur:hex(where(fp.fn).a)} : {})]);
+    if (fp && fp.reg) s.push([`<b>Registers</b>: the last 8 digits of <code>${fp.reg}</code> (e.g. <code>0012A3C0</code>) are the object's address.`, pic('regs', {reg: fp.reg, obj: true})]);
+    else s.push([`Press <b>Step Over</b> until the highlighted line has <code>${hex(off, 1).toLowerCase()}(</code> in it, like <code>lw v0, ${hex(off, 1).toLowerCase()}(s0)</code>. The register in brackets (here <code>s0</code>) holds the object: in <b>Registers</b>, its last 8 digits (e.g. <code>0012A3C0</code>) are the object's address.`, pic('regs', {reg: 's0', obj: true})]);
+    s.push([`Add ${C(hex(off, 1))}: <code>0x0012A3C0 + ${hex(off, 1)}</code>. Go to that sum in <b>Memory</b>. Delete the breakpoint, press <b>Run</b>.`, pic('goto', {a:'0x0012A3C0 + ' + hex(off, 1)})]);
+    s.push(B('Read it'));
+    s.push(readStep(v, 'the sum')); s.push(watchStep(v));
+    s.push(B('Catch what changes it'));
+    s.push(bpStep('the sum', v.el || 4, false, 'the sum', v.st)); s.push(hitStep(false)); s.push(cleanup);
+  }
+  return tail(s, lv);
+}
+function tail(s, lv){
+  s.push('<h3 class="sgrp">Read the line where it stopped</h3>');
+  s.push(['Right-click the highlighted line in the Disassembly and copy it.', decoderBlock(lv || LV)]);
+  s.push('<h3 class="sgrp">Send it</h3>');
+  s.push(['Sure? Close this panel, type the name and one line on what you saw, e.g. "drops by 1 each frame, the HUD icon fades at 0".', null]);
+  return render(s);
+}
+/* The one global (not an array) whose type is this field's struct: [name, address]. */
+function fixedHome(e){
+  const k = e.cands[e.pick][0], hits = Object.entries(IDX.gtype).filter(([n, g]) => g[0] === k && !g[2] && where(n).a != null);
+  const names = [...new Set(hits.map(([n]) => IDX.alias[n] || n))];
+  if (names.length !== 1) return null;
+  const n = hits[0][0], ln = IDX.alias[n] || n;
+  return [n, where(n).a, realName(ln) || srcName(n)];
+}
+function render(s){ let n = 0; return s.map(x => typeof x === 'string' ? x : `<div class="step"><span class="sn">${++n}</span><div><p>${x[0]}</p>${x[1] || ''}</div></div>`).join(''); }
+/* 4 bytes as PCSX2's Memory view shows them (back to front) -> the float they hold. */
+function fconv(){
+  const d = ($('fconv').value.match(/[0-9a-f]{2}/gi) || []).slice(0, 4);
+  if (d.length < 4){ $('fout').textContent = 'type 4 bytes'; return; }
+  const b = new DataView(new ArrayBuffer(4)); d.forEach((x, i) => b.setUint8(i, parseInt(x, 16)));
+  $('fout').textContent = String(+b.getFloat32(0, true).toPrecision(7));
+}
+/* Simplified sketches of the PCSX2 2.x debugger, not screenshots. The orange part is what to click. */
+function pic(kind, o = {}){
+  const T = (x, y, t, c = 'pt', a = '') => `<text x="${x}" y="${y}" class="${c}"${a}>${esc(t)}</text>`;
+  const R = (x, y, w, h, c = 'pb', r = 3) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" class="${c}"/>`;
+  const H = (x, y, w, h, t, tx) => R(x, y, w, h, 'ph') + T(tx ?? x + 8, y + h / 2 + 4, t, 'pht');
+  const win = (title, body, h = 220) => `<svg class="pic" viewBox="0 0 400 ${h}" role="img" aria-label="Sketch: ${esc(title)}">${R(.5, .5, 399, h - 1, 'pw', 8)}${R(.5, .5, 399, 22, 'pbar', 8)}<rect x=".5" y="14" width="399" height="9" class="pbar"/>${['#ef6b5e','#f4bf4f','#61c554'].map((c, i) => `<circle cx="${14 + i * 14}" cy="11.5" r="4" fill="${c}" opacity=".7"/>`).join('')}${T(200, 15.5, title, 'ps', ' text-anchor="middle"')}${body}</svg>`;
+  const lines = (x, y, n, w) => Array.from({length:n}, (_, i) => `<rect x="${x}" y="${y + i * 12}" width="${w * (.45 + ((i * 37) % 50) / 100)}" height="4" rx="2" class="pl"/>`).join('');
+  const dbg = (tab, extra = '') => {
+    let b = '';
+    b += ['Run','Step Into','Step Over','Step Out'].map((t, i) => ((o.out && t === 'Step Out') || (o.run && t === 'Run')) ? H(10 + i * 68, 30, 62, 18, t) : R(10 + i * 68, 30, 62, 18) + T(18 + i * 68, 43, t)).join('');
+    const dw = o.regs ? 118 : 248, rx = dw + 18;
+    b += R(10, 56, dw, 92, 'pp') + lines(18, 64, 7, dw - 28) + (o.cur ? R(14, 85, 240, 12, 'ph', 2) + T(18, 94.5, '▶ ' + o.cur, 'pht') : '');
+    const want = o.reg || (o.a0 ? 'a0' : null), regs = ['at','v0','v1','a0','a1','a2','a3'];
+    if (want && !regs.includes(want)) regs[0] = want;
+    b += R(rx, 56, 390 - rx, 92, 'pp') + regs.map((r, i) => {
+      const y = 68 + i * 11.5, on = o.regs && (want ? r === want : r[0] === 'a'), v = want && r === want ? (o.reg && !o.obj ? '00140000' : '0012A3C0') : '00000000';
+      if (!o.regs) return T(rx + 10, y, r, 'pt') + T(rx + 38, y, '00000000', 'pd');
+      const g = k => T(rx + 34 + k * 52, y, k === 3 ? v : '00000000', k === 3 && on ? 'pht' : 'pd', ' font-size="9" textLength="42" lengthAdjust="spacingAndGlyphs"');
+      return (on ? R(rx + 4, y - 9, 382 - rx - 4, 11, 'pm', 2) + R(rx + 34 + 3 * 52 - 4, y - 9.5, 50, 12, 'ph', 2) : '') + T(rx + 10, y, r, on ? 'pht' : 'pt') + [0, 1, 2, 3].map(g).join('');
+    }).join('');
+    b += ['Memory','Breakpoints','Call Stack'].map((t, i) => t === tab ? H(10 + i * 84, 156, 78, 18, t) : R(10 + i * 84, 156, 78, 18) + T(18 + i * 84, 169, t)).join('');
+    b += R(10, 178, 380, 34, 'pp') + (o.hexrow ? T(18, 199, '0012A43C', 'pd') + H(80, 188, 82, 16, o.bytes || '1E 00 00 00', 86) + T(170, 199, '80 00 00 00  00 00 00 00', 'pd') : lines(18, 186, 3, 200));
+    return win('PCSX2 Debugger', b + extra);
+  };
+  if (kind === 'open'){
+    const b = ['System','Settings','View','Tools','Debug','Help'].map((t, i) => t === 'Debug' ? H(8 + i * 58, 28, 52, 18, t) : T(14 + i * 58, 41, t)).join('')
+      + R(8, 52, 384, 156, 'pp') + T(200, 136, 'game', 'pd', ' text-anchor="middle"')
+      + R(240, 48, 140, 70, 'pm', 5) + T(250, 66, 'Enable System Console', 'pd') + H(244, 74, 132, 20, 'Open Debugger', 252) + T(250, 110, 'Show Overlays', 'pd');
+    return win('PCSX2', b);
+  }
+  if (kind === 'bp'){
+    const dlg = R(70, 28, 260, 122, 'pm', 6) + T(82, 46, 'New Breakpoint', 'pt', ' font-weight="600"')
+      + (o.exec ? H(82, 54, 80, 18, '◉ Execute') + T(176, 67, '○ Memory', 'pd') : T(90, 67, '○ Execute', 'pd') + H(170, 54, 80, 18, '◉ Memory'))
+      + T(82, 93, 'Address', 'pd') + H(140, 80, 176, 20, o.a, 148)
+      + (o.exec ? T(82, 119, 'Condition', 'pd') + R(140, 107, 176, 18) : T(82, 119, 'Size', 'pd') + H(108, 107, 40, 18, String(o.size || 4)) + (o.read ? H(160, 107, 64, 18, '☑ Read') + T(236, 120, '☐ Write', 'pd') : T(166, 120, '☐ Read', 'pd') + H(230, 107, 64, 18, '☑ Write')))
+      + R(262, 128, 54, 16, 'ph') + T(281, 140, 'OK', 'pht') + T(200, 140, 'Cancel', 'pd')
+      + R(160, 190, 76, 18, 'pm', 4) + T(170, 203, 'New', 'pht');
+    return dbg('Breakpoints', dlg);
+  }
+  if (kind === 'goto'){
+    const m = R(150, 176, 120, 40, 'pm', 5) + H(154, 180, 112, 16, 'Go to Address', 162) + T(162, 210, 'Copy Address', 'pd')
+      + R(96, 70, 208, 70, 'pm', 6) + T(108, 90, 'Go to Address', 'pt', ' font-weight="600"') + H(108, 100, 184, 22, o.a, 116);
+    return dbg('Memory', m);
+  }
+  if (kind === 'stopped'){ o.cur = o.cur || 'the line that wrote it'; return dbg('Breakpoints'); }
+  if (kind === 'value'){ o.hexrow = true; return dbg('Memory', R(186, 152, 150, 20, 'pm', 4) + T(194, 166, (o.bytes || '1E 00 00 00') + '  =  ' + (o.val || '0x1E = 30'), 'pht')); }
+  if (kind === 'regs'){ o.regs = true; o.out = !o.a0 && !o.reg; return dbg('Call Stack'); }
+  return '';
+}
+async function openHelp(e){
+  const d = $('drawer'), fp = e.kind === 'field' ? await fieldProbe(e) : null;
+  d.querySelector('h2').textContent = 'Check it in PCSX2';
+  $('dfoot').textContent = 'Sketches of the PCSX2 2.x debugger: click the orange part.';
+  $('dbody').innerHTML = steps(e, fp);
+  if ($('fconv')){ $('fconv').oninput = fconv; fconv(); }
+  $('dis').oninput = decode; $('dlvl').onchange = decode; wire($('dbody'));
+  $('dsub').innerHTML = WHAT[e.kind] + ' ' + `<code>${esc(e.kind === 'field' ? SN(e.cands[e.pick][0]) + '.' + e.word : e.word)}</code>`;
+  d.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => copy(b.dataset.copy));
+  d.hidden = false; requestAnimationFrame(() => d.classList.add('in'));
+  $('dclose').focus();
+}
+/* Paste a PCSX2 Disassembly line: find the function it is in and say in plain words what the instruction does. */
+const LOADS = {lb:1, lbu:1, lh:2, lhu:2, lw:4, lwu:4, ld:8, lq:16, lwc1:4, ldl:8, ldr:8, lwl:4, lwr:4, lqc2:16};
+const STORES = {sb:1, sh:2, sw:4, sd:8, sq:16, swc1:4, sdl:8, sdr:8, swl:4, swr:4, sqc2:16};
+const OPS = {
+  addiu:'adds a number', addu:'adds two values', daddu:'adds two values', subu:'subtracts', dsubu:'subtracts', lui:'loads the top half of a 32-bit number or address',
+  ori:'combines bits (often the low half of a number)', andi:'keeps only some bits (a mask)', and:'keeps only some bits', or:'combines bits', xor:'flips bits', nor:'flips bits',
+  sll:'multiplies by a power of two (shift left)', srl:'divides by a power of two (shift right)', sra:'divides by a power of two (shift right, signed)', dsll:'shifts left', dsrl:'shifts right', dsra:'shifts right', dsll32:'shifts left', dsrl32:'shifts right', dsra32:'shifts right',
+  slt:'checks if one value is smaller (1 = yes)', slti:'checks if a value is smaller than a number', sltu:'checks if one value is smaller (unsigned)', sltiu:'checks if a value is smaller than a number (unsigned)',
+  mult:'multiplies', multu:'multiplies', div:'divides', divu:'divides', mflo:'takes the result of a multiply or divide', mfhi:'takes the remainder of a divide',
+  move:'copies a value', li:'puts a number in a register', nop:'does nothing (a delay slot)', jr:'jumps to an address in a register', jalr:'calls a function through a pointer',
+  'add.s':'float math: adds', 'sub.s':'float math: subtracts', 'mul.s':'float math: multiplies', 'div.s':'float math: divides', 'mov.s':'copies a float', 'neg.s':'float math: negates', 'abs.s':'float math: absolute value',
+  'c.lt.s':'compares two floats (smaller?)', 'c.le.s':'compares two floats (smaller or equal?)', 'c.eq.s':'compares two floats (equal?)', 'cvt.s.w':'turns an integer into a float', 'cvt.w.s':'turns a float into an integer',
+  mtc1:'moves a value into a float register', mfc1:'moves a float register into a normal register', bc1t:'branches if the last float compare was true', bc1f:'branches if the last float compare was false',
+  syscall:'calls the PS2 kernel', sync:'waits for memory', ei:'turns interrupts on', di:'turns interrupts off'
+};
+const BR = {beq:'equal', bne:'not equal', beql:'equal', bnel:'not equal', blez:'zero or below', bgtz:'above zero', bltz:'below zero', bgez:'zero or above', blezl:'zero or below', bgtzl:'above zero', bltzl:'below zero', bgezl:'zero or above', beqz:'zero', bnez:'not zero', b:''};
+const ralias = () => IDX.ralias ??= Object.fromEntries(Object.entries(IDX.alias).filter(([a]) => IDX.defs[a]).map(([a, b]) => [b, a]));
+const srcName = n => IDX.defs[n] || /^D_/.test(n) ? n : ralias()[n] || n;
+function findFn(a, lvl){
+  return IDX.fmap.filter(f => a >= f[0] && a < f[0] + f[1] && (!lvl || (lvl === 'boot' ? !f[3] : f[3] === lvl || (!f[3] && f[0] < RESIDENT_END))));
+}
+function nearGlobal(a){
+  let best = null;
+  for (const [n, v] of Object.entries(IDX.addr)) if (v >= 0x100000 && v <= a && a - v < 0x1000 && !IDX.fnames.has(n) && (!best || v > best[1])) best = [n, v];
+  return best;
+}
+async function fnBody(name){
+  const d = IDX.defs[name]; if (!d) return null;
+  const t = await text(d[0]); if (t == null) return null;
+  const L = t.t.split('\n'); let depth = 0, seen = false, out = [];
+  for (let i = d[1] - 1; i < L.length && i < d[1] + 1500; i++){
+    out.push(L[i]);
+    if (/INCLUDE_ASM/.test(L[i]) && !seen) return {asm: true, path: d[0], line: d[1]};
+    for (const c of L[i]) { if (c === '{'){ depth++; seen = true; } else if (c === '}') depth--; }
+    if (seen && depth <= 0) break;
+  }
+  return {text: out.join('\n'), path: d[0], line: d[1]};
+}
+function parseIns(line){
+  const toks = line.replace(/,/g, ' , ').split(/\s+/).filter(Boolean);
+  for (let i = 0; i < toks.length; i++){
+    const m = toks[i].toLowerCase();
+    if (m in LOADS || m in STORES || m in OPS || m in BR || m === 'jal' || m === 'j' || /^v[a-z]/.test(m) && i > 0){
+      return {op: m, args: toks.slice(i + 1).join(' ').replace(/\s*,\s*/g, ', ').replace(/\$/g, '').trim()};
+    }
+  }
+  return null;
+}
+const nameAt = a => { const f = findFn(a, decodeLvl()); return f.length === 1 && f[0][0] === a ? srcName(f[0][2]) : null; };
+const decodeLvl = () => $('dlvl') ? $('dlvl').value : '';
+const fnBtn = (n, ln, lbl) => `<button class="ghost sm" type="button" data-fn="${esc(n)}">${lbl || esc(n)}</button>`;
+const GP = 0x166C00;  /* $gp in every level, docs/overlays.md */
+/* PCSX2 shows a 128-bit register as four groups of 8 digits; the address is the last group. */
+const regValue = () => {
+  const d = (($('dreg') && $('dreg').value) || '').replace(/^0x/i, '').replace(/[^0-9a-f]/gi, '');
+  return d.length && (d.length <= 8 || d.length === 32) ? parseInt(d.slice(-8), 16) : null;
+};
+/* Groups typed digits as PCSX2 shows them: 8 digits, space, 8 digits... and keeps the caret after the same digit. */
+function groupReg(ev){
+  const el = ev.target, before = el.value.slice(0, el.selectionStart).replace(/[^0-9a-f]/gi, '').length;
+  const d = el.value.replace(/^0x/i, '').replace(/[^0-9a-f]/gi, '').slice(0, 32).toUpperCase();
+  el.value = d.replace(/(.{8})(?=.)/g, '$1 ');
+  const pos = before + Math.floor(Math.max(before - 1, 0) / 8);
+  el.setSelectionRange(pos, pos);
+}
+const globBtn = n => `<button class="ghost sm" type="button" data-glob="${esc(n)}"><span class="mono">${esc(srcName(n))}</span></button>`;
+function isGlobal(n){ return !IDX.fnames.has(n) && !IDX.afn.has(n) && !/^(FUN_|func_|jtbl_|lbl_)/.test(n); }
+/* The global a target address is in: a struct-typed global that covers it wins (the outermost one), else the nearest one below. */
+function globalAt(t){
+  let best = null, outer = null;
+  for (const [n, v] of Object.entries(IDX.addr)){
+    if (v < 0x100000 || v > t || t - v >= 0x4000 || !isGlobal(n)) continue;
+    const g = IDX.gtype[n] || IDX.gtype[IDX.alias[n]], S = g && IDX.structs[g[0]], z = S && S.z && (g[2] ? 0 : S.z);
+    if (z && t < v + z && (!outer || v < outer[1])) outer = [n, v];
+    if (t - v < 0x400 && (!best || v > best[1])) best = [n, v];
+  }
+  return outer || best;
+}
+/* Globals whose address ends in the instruction's offset: base = lui << 16, so address - offset is a multiple of 0x10000. */
+function globalsLow16(fn, sx){
+  const ok = v => v >= 0x100000 && ((v - sx) & 0xFFFF) === 0;
+  const body = fn && fn.body && fn.body.text, inBody = body ? [...new Set(body.match(/\b\w+\b/g))].filter(w => IDX.addr[w] != null && isGlobal(w) && ok(IDX.addr[w])).map(w => [w, IDX.addr[w]]) : [];
+  if (inBody.length) return inBody.slice(0, 6);
+  const lv = decodeLvl(), mine = n => { const m = /^D_L(\d\d)_/.exec(n); return !m || !lv || m[1] === lv; };
+  return Object.entries(IDX.addr).filter(([n, v]) => isGlobal(n) && mine(n) && ok(v) && v < 0x200000).slice(0, 6);
+}
+const fieldBtns = hits => hits.slice(0, 6).map(([k, f]) => `<button class="ghost sm" type="button" data-field="${esc(f)}" data-st="${esc(k)}"><span class="mono">${esc(SN(k))}.${esc(f)}</span></button>`).join('');
+function fieldList(fn, off){
+  const body = fn && fn.body && fn.body.text; if (!body) return [];
+  const types = new Set((body.match(/\b[A-Za-z_]\w*\b/g) || []).filter(w => IDX.names.structSet.has(w))), hits = [];
+  for (const k of Object.keys(IDX.structs)) if (types.has(SN(k))) for (const f of IDX.structs[k].f) if (f[1] === off) hits.push([k, f[0]]);
+  return hits;
+}
+/* Which record and field of a global a byte offset lands in, e.g. D_00141848 + 0 -> .stat[0].count. */
+function recordPath(name, d){
+  const t = IDX.gtype[name] || IDX.gtype[IDX.alias[name]]; if (!t) return null;
+  const [ty, es, arr] = t, S = IDX.structs[ty];
+  let path = '', last = null;
+  const walk = (k, r, depth) => {
+    const st = IDX.structs[k]; if (!st || depth > 6) return;
+    let f = st.f.find(x => x[1] != null && r >= x[1] && x[4] != null && r < x[1] + x[4]);
+    if (!f) f = [...st.f].reverse().find(x => x[1] != null && x[1] <= r); if (!f) return;
+    path += '.' + f[0]; last = [k, f[0]]; r -= f[1];
+    const sub = f[3] && IDX.structs[f[3]], z = sub && sub.z;
+    if (z){ if (f[4] > z){ path += `[${Math.floor(r / z)}]`; r %= z; } walk(f[3], r, depth + 1); }
+    else if (f[5] && f[4] > f[5]) path += `[${Math.floor(r / f[5])}]`;
+  };
+  if (S && S.z){ if (arr){ path = `[${Math.floor(d / S.z)}]`; d %= S.z; } else if (d >= S.z) return null; walk(ty, d, 0); }
+  else if (es && arr) path = `[${Math.floor(d / es)}]`;
+  else return null;
+  return {path, last};
+}
+/* One short answer for a line: {head, more, ask}. ask names the register we still need. */
+function explain(ins, fn){
+  if (!ins) return {head: 'Paste the whole line, with the instruction at the end.'};
+  const {op, args} = ins;
+  const mem = /^(\w+),\s*(-?(?:0x)?[0-9a-f]+)\((\w+)\)/i.exec(args);
+  if ((op in LOADS || op in STORES) && mem){
+    const [, , offS, base] = mem, off = parseInt(offS, /0x/i.test(offS) ? 16 : 10), verb = op in LOADS ? 'Reads' : 'Writes';
+    if (base === 'sp') return {head: `${verb} a local variable`, more: 'Temporary value inside this function, not game data.'};
+    const sx = off > 0x7FFF && off <= 0xFFFF ? off - 0x10000 : off, rv = regValue(), target = base === 'gp' ? GP + sx : rv != null ? rv + sx : null;
+    const wd = Math.min(op in LOADS ? LOADS[op] : STORES[op], 4);
+    const bp = (t, lbl) => `Breakpoint for it: <b>Memory</b> → <b>${verb === 'Reads' ? 'Read' : 'Write'}</b> → ${copyChip(hex(t))}<div class="picks"><button class="ghost sm" type="button" data-try="${t}" data-sz="${wd}" data-lbl="${esc(lbl || hex(t))}">Try a value here</button></div>`;
+    if (target != null){
+      const g = globalAt(target);
+      if (g){
+        const r = recordPath(g[0], target - g[1]);
+        if (r) return {head: `${verb} ${globBtn(g[0])}`, more: `<div class="rec">${esc(srcName(g[0]))}${esc(r.path)}</div>${r.last ? `<div class="picks">${fieldBtns([[r.last[0], r.last[1]]])}</div>` : ''}${bp(target, srcName(g[0]) + r.path)}`};
+        return {head: `${verb} ${globBtn(g[0])}${g[1] === target ? '' : ` at +${hex(target - g[1], 1)}`}`, more: bp(target, srcName(g[0]) + (g[1] === target ? '' : '+' + hex(target - g[1], 1)))};
+      }
+      const fl = fieldList(fn, off);
+      return {head: fl.length ? `${verb} ${fieldBtns(fl)}` : `${verb} offset ${hex(off, 1)} of an object`, more: bp(target)};
+    }
+    const gs = globalsLow16(fn, sx), fl = fieldList(fn, off);
+    if (!gs.length && fl.length) return {head: `${verb} ${fieldBtns(fl)}`};
+    if (gs.length === 1 && !fl.length && off >= 0x400) return {head: `${verb} ${globBtn(gs[0][0])}`, more: 'Probably. The number below makes it sure.', ask: base};
+    return {head: `${verb} something at <code>${esc(base)}</code> + ${hex(off, 1)}`, ask: base};
+  }
+  if (op === 'jal' || op === 'j'){
+    const t = parseInt((/([0-9a-f]{6,8})/i.exec(args) || [])[1] || '', 16), n = isNaN(t) ? null : nameAt(t);
+    return {head: `${op === 'jal' ? 'Calls' : 'Jumps to'} ${n ? fnBtn(n) : `<code>${isNaN(t) ? esc(args) : hex(t)}</code>`}`};
+  }
+  if (op in BR) return {head: 'Decides where to go next (an <code>if</code> or a loop)'};
+  if (op === 'jr' && /^ra\b/.test(args)) return {head: 'Returns from the function'};
+  if (OPS[op]) return {head: OPS[op][0].toUpperCase() + OPS[op].slice(1)};
+  if (/^v/.test(op)) return {head: 'Vector math (positions, directions, matrices)'};
+  return {head: `<code>${esc(op)}</code>`};
+}
+async function decode(){
+  const line = $('dis').value.trim(), res = $('dres'), lvl = decodeLvl();
+  setLV(lvl === 'boot' ? '' : lvl);
+  if (!line){ res.innerHTML = ''; showAsk(null); return; }
+  const toks = line.match(/\b(?:0x)?[0-9A-Fa-f]{8}\b/g) || [];
+  let a = null, hits = [];
+  for (const t of toks){ const v = parseInt(t.replace(/^0x/i, ''), 16); const h = findFn(v, lvl); if (h.length){ a = v; hits = h; break; } }
+  const ins = parseIns(line.replace(/\b(?:0x)?[0-9A-Fa-f]{8}\b/g, m => toks.indexOf(m) < 2 ? ' ' : m));
+  if (a == null && !ins){
+    const v = toks.length ? parseInt(toks[0].replace(/^0x/i, ''), 16) : null, g = v != null ? globalAt(v) : null;
+    res.innerHTML = `<div class="ans"><div class="head">${g ? `This is ${globBtn(g[0])}` : 'Copy the whole line from the Disassembly.'}</div></div>`; wire(res); showAsk(null); return;
+  }
+  const f = hits.length === 1 ? hits[0] : null, name = f && srcName(f[2]), body = f ? await fnBody(name) : null;
+  const x = explain(ins, f ? {name, body} : null);
+  const where = f ? `in ${fnBtn(name)}${body && !body.asm ? ` <button class="linkish" type="button" data-go="${esc(body.path)}" data-ln="${body.line}">C code</button>` : ''}`
+    : hits.length > 1 ? `<span class="faint">Pick your level above to see the function.</span>` : '';
+  res.innerHTML = `<div class="ans"><div class="head">${x.head}</div>${x.more ? `<div class="more">${x.more}</div>` : ''}${where ? `<div class="wh">${where}</div>` : ''}</div>`;
+  wire(res); showAsk(x.ask || null);
+}
+/* The second box appears only when the answer needs a register value. */
+function showAsk(reg){
+  const box = $('dask');
+  if (!reg){ if (!$('dreg') || !$('dreg').value) box.innerHTML = ''; else if (box.dataset.reg) {} return; }
+  if (box.dataset.reg === reg && $('dreg')) return;
+  box.dataset.reg = reg;
+  box.innerHTML = `<label for="dreg" class="askl"><span><span class="sn">2</span><span>In <b>Registers</b>, copy the <b>${esc(reg)}</b> row (or just its last 8 digits)</span></span><input id="dreg" class="nn" autocomplete="off" spellcheck="false" placeholder="00000000 00000000 00000000 00140000"></label>${pic('regs', {a0:true, reg})}`;
+  $('dreg').oninput = ev => { groupReg(ev); decode(); };
+}
+function wire(root){
+  root.querySelectorAll('[data-fn]').forEach(b => b.onclick = async () => { closeHelp(); const n = b.dataset.fn, d = IDX.defs[n]; if (d) await openFile(d[0], d[1]); select({kind:'function', word:n}); });
+  root.querySelectorAll('[data-glob]').forEach(b => b.onclick = () => { closeHelp(); select({kind:'global', word:srcName(b.dataset.glob)}); });
+  root.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => copy(b.dataset.copy));
+  root.querySelectorAll('[data-go]').forEach(b => b.onclick = () => openFile(b.dataset.go, +b.dataset.ln));
+  root.querySelectorAll('[data-try]').forEach(b => b.onclick = () => openTry({a: +b.dataset.try, size: +b.dataset.sz, label: b.dataset.lbl, lv: decodeLvl() === 'boot' ? '' : decodeLvl(), obj: !/^D_|^[a-z_]/i.test(b.dataset.lbl) || /^0x/.test(b.dataset.lbl)}));
+  root.querySelectorAll('[data-lvl]').forEach(b => b.onclick = () => { $('dlvl').value = b.dataset.lvl; decode(); });
+  root.querySelectorAll('[data-field]').forEach(b => b.onclick = () => { closeHelp(); const c = structsWithField(b.dataset.field), i = c.findIndex(x => x[0] === b.dataset.st); select({kind:'field', word:b.dataset.field, cands:c, pick: i < 0 ? 0 : i}); });
+}
+function decoderBlock(lv){
+  return `<div class="dform"><div class="dtop"><label for="dis"><span class="sn">1</span><span>Paste the highlighted line</span></label><select id="dlvl" aria-label="Level you are playing"><option value="">Level ?</option><option value="boot">Start-up</option>${Array.from({length:19}, (_, i) => String(i).padStart(2, '0')).map(l => `<option value="${l}"${l === lv ? ' selected' : ''}>Level ${l}</option>`).join('')}</select></div>
+    <textarea id="dis" rows="2" spellcheck="false" placeholder="00225C88  A4821848  sh  v0, 0x1848(a0)"></textarea></div><div class="dres" id="dres"></div><div class="dask" id="dask"></div>`;
+}
+/* "Try a value in the game": a PCSX2 cheat (.pnach) that keeps one address at a value, so you see what it changes. */
+const CRC = 'CE4933D0';  /* the US disc, as PCSX2's own patch list names it */
+function pnach(o, v, sz, shown){
+  const t = {1:'byte', 2:'short', 4:'word'}[sz], lbl = o.label.replace(/\[/g, '(').replace(/\]/g, ')');
+  const sv = shown ?? v;
+  return ['gametitle=Ratchet & Clank (SCUS-97199)', '', `[Naming Desk: ${lbl} = ${sv}]`, 'author=Lombyte Naming Desk',
+    `description=Keeps ${plural(sz, 'byte', 'bytes')} at ${hex(o.a)} at ${sv}${o.lv ? ' (level ' + o.lv + ' only)' : ''}`,
+    `patch=1,EE,${o.a.toString(16).toUpperCase().padStart(8, '0')},${t},${(v >>> 0).toString(16).toUpperCase().padStart(8, '0')}`].join('\n') + '\n';
+}
+function openTry(o){
+  if (o.a < RESIDENT_END) o.lv = '';  /* resident memory: the same address in every level */
+  const d = $('drawer'), max = {1:255, 2:65535, 4:4294967295}[o.size];
+  d.querySelector('h2').textContent = 'Try a value in the game';
+  $('dsub').innerHTML = `<code>${esc(o.label)}</code> · ${hex(o.a)}`;
+  const step = (n, t, b = '') => `<div class="step"><span class="sn">${n}</span><div><p>${t}</p>${b}</div></div>`;
+  $('dbody').innerHTML =
+    step(1, o.flt ? 'Pick a float to force, e.g. 0, 1.5 or 100.' : 'Pick a value to force. Try 0, 1 or a big number.',
+      `<div class="tryrow"><input id="tval" class="nn" value="99" autocomplete="off" spellcheck="false" aria-label="Value"><select id="tsz" aria-label="Size"${o.flt ? ' hidden' : ''}>${[1, 2, 4].map(z => `<option value="${z}"${z === o.size ? ' selected' : ''}>${plural(z, 'byte', 'bytes')}</option>`).join('')}</select></div><div class="picks">${(o.flt ? ['0', '1', '10', '100'] : ['0', '1', '99', String(max)]).map(v => `<button class="ghost sm" type="button" data-v="${v}">${v}</button>`).join('')}</div>`)
+    + step(2, 'In PCSX2, open <b>Tools → Open Data Directory</b>, go into <code>cheats</code> and make a text file with this name. Paste the cheat into it.',
+      `<div class="vrow"><code class="rec" id="tname"></code><button class="ghost sm" type="button" id="tcopyn">Copy name</button></div><textarea id="tpn" rows="7" readonly spellcheck="false"></textarea><div class="picks"><button class="ghost sm" type="button" id="tcopy">Copy the cheat</button></div>`)
+    + step(3, `Right-click the game, open <b>Properties → Cheats</b>, tick <b>Naming Desk</b> and play${o.lv ? ` level ${o.lv}` : ''}. The value stays locked, so watch what changes on screen: that is what the value does.`)
+    + step(4, 'Untick it when you are done.' + (o.lv ? ` The address is only right in level ${o.lv}: untick it before you leave the level.` : '') + (o.obj ? ' This is a field of an object, so it only works while that object stays at this address.' : ''));
+  $('dfoot').textContent = 'The cheat file only holds the address and value you chose, nothing from the game. If the game crashes, untick it and try a smaller value.';
+  const upd = () => {
+    const sz = o.flt ? 4 : +$('tsz').value, raw = $('tval').value.trim(), f = new DataView(new ArrayBuffer(4));
+    let v = /^0x/i.test(raw) ? parseInt(raw, 16) : parseInt(raw, 10);
+    if (o.flt){ const x = parseFloat(raw); f.setFloat32(0, x); v = isNaN(x) ? NaN : f.getUint32(0); }
+    $('tname').textContent = `SCUS-97199_${CRC}.pnach`;
+    $('tpn').value = isNaN(v) ? 'Type a number.' : pnach(o, Math.min(Math.max(v, 0), {1:255, 2:65535, 4:4294967295}[sz]), sz, o.flt ? raw : null);
+  };
+  $('tval').oninput = $('tsz').onchange = upd;
+  $('dbody').querySelectorAll('[data-v]').forEach(b => b.onclick = () => { $('tval').value = b.dataset.v; upd(); });
+  $('tcopy').onclick = () => copy($('tpn').value);
+  $('tcopyn').onclick = () => copy($('tname').textContent);
+  upd();
+  d.hidden = false; requestAnimationFrame(() => d.classList.add('in'));
+  $('dclose').focus();
+}
+function closeHelp(){ const d = $('drawer'); d.classList.remove('in'); setTimeout(() => { if (!d.classList.contains('in')) d.hidden = true; }, 220); }
+function facts(e){
+  const out = [], loc = (p, l) => `<code>${esc(p)}${l ? ':' + l : ''}</code>`;
+  if (e.kind === 'type'){ const s = IDX.structs[e.key || e.word]; if (s){ if (s.z != null) out.push(`size ${hex(s.z, 1)} bytes`); out.push('defined in ' + loc(s.p, s.l)); } }
+  if (e.kind === 'field'){ const s = IDX.structs[e.cands[e.pick][0]]; if (s.z != null) out.push(`struct size ${hex(s.z, 1)}`); out.push('declared in ' + loc(s.p, e.cands[e.pick][2])); }
+  if (e.kind === 'function' || e.kind === 'global'){ if (IDX.defs[e.word]) out.push('defined in ' + loc(...IDX.defs[e.word])); if (IDX.alias[e.word]) out.push(`linked as <code>${esc(IDX.alias[e.word])}</code>`); }
+  if (e.kind === 'macro' && IDX.macros[e.word]) out.push('defined in ' + loc(...IDX.macros[e.word]));
+  return out.length ? `<div class="facts">${out.map(x => `<span>${x}</span>`).join('')}</div>` : '';
+}
+/* What the data is and whether the report counts it. Bytes are never shown: they come from the game disc. */
+function dataBlock(e, mv){
+  const d = e.kind === 'global' && dataOf(e.word); if (!d) return '';
+  const st = isBss(d) ? ['', 'Zeroed at start (bss), not counted'] : d[1] ? ['ok', 'In C, counted as data'] : ['no', 'In assembly, not counted yet'];
+  const nm = f => `<code title="${esc(f)}">${esc(f.split('/').pop())}</code>`;
+  const also = d[4] === 1 && !d[1] && Array.isArray(d[5]) ? d[5].filter(x => typeof x === 'string') : null, more = also && d[5].find(x => typeof x === 'number');
+  const rd = d[5] === 'lit' && !d[1] ? `A float constant${d[4] === 1 ? ` read by ${nm(d[3][0])}` : ''}: the compiler makes it from a number in the C code, so it is not moved by hand` : !d[4] ? 'No C file reads it yet' : d[4] === 1 && d[5] === 'none' && !d[1] ? `Only ${nm(d[3][0])} names it, but the code reaches it through a pointer: keep it in assembly` : also ? `Only ${nm(d[3][0])} names it, but code in ${also.slice(0, 2).map(f => f.startsWith('src/') ? nm(f) : 'level code').join(', ')}${(more || also.length) > 2 ? ` and ${(more || also.length) - 2} more` : ''} reads it too: keep it in assembly` : d[4] === 1 ? `Read only by ${nm(d[3][0])}` : `Read by ${plural(d[4], 'file', 'files')}: ${d[3].slice(0, 2).map(nm).join(', ')}${d[4] > 2 ? ` and ${d[4] - 2} more` : ''}`;
+  const box = movable(d) ? `<label class="mv"><input type="checkbox" id="mv"${mv ? ' checked' : ''}>Move it into this file. A new name is optional.</label>` : '';
+  return `<div class="data"><div class="drow"><span class="st ${st[0]}">${st[1]}</span><span>${regionName(d[0])}</span>${d[2] ? `<span>${d[2].toLocaleString('en')} bytes</span>` : ''}</div><div class="drow"><span>${rd}</span>${box}</div></div>`;
+}
+function usesBlock(e){
+  if (!uses) return '<div class="uload" role="status"><span class="spin" aria-hidden="true"></span>Finding every place that uses it…<i aria-hidden="true"></i></div>';
+  if (!uses.list.length) return `<div class="faint">${e.kind === 'file' || e.kind === 'folder' ? 'No other file in src/ or include/ refers to this path.' : 'Nothing else in the code uses it.'}</div>`;
+  const likely = e.kind === 'field' && e.cands.length > 1;
+  const what = e.kind === 'local' ? `Used ${plural(uses.list.length, 'time', 'times')} inside <code class="mono">${esc(e.fn)}</code>` : e.kind === 'file' || e.kind === 'folder' ? `Mentioned in ${plural(uses.list.length, 'place', 'places')} in ${plural(uses.files, 'file', 'files')}` : `Used in ${plural(uses.list.length, 'place', 'places')} in ${plural(uses.files, 'file', 'files')}`;
+  const note = likely ? `${e.cands.length} structs have a field called ${esc(e.word)}; this counts files that use ${esc(SN(e.cands[e.pick][0]))}` : 'all of them change with the new name';
+  return `<details class="uses"><summary>${what}<span class="faint">${note}</span></summary><ul>${uses.list.slice(0, 400).map(x => `<li><button type="button" data-go="${esc(x[0])}" data-ln="${x[1]}"><b>${esc(x[0])}:${x[1]}</b>  ${esc(x[2])}</button></li>`).join('')}</ul></details>`;
+}
+/* The name the issue uses: the typed one, or the current one when the data only moves. */
+const newName = (e, d) => d.nn || (d.mv && movable(e.kind === 'global' && dataOf(e.word)) ? e.word : '');
+function valid(e, v, mv){
+  if (mv && v === e.word) return '';
+  if (!v) return 'Type the new name.';
+  if (e.kind === 'file'){ if (!/^(src|include)\/[\w.\/-]+$/.test(v)) return 'Keep it under src/ or include/, with letters, digits, _ - . and /.'; if (v.split('.').pop() !== e.name.split('.').pop()) return 'Keep the file extension.'; if (IDX.byPath[v]) return 'A file with this path already exists.'; return v === e.name ? 'That is the current path.' : ''; }
+  if (e.kind === 'folder'){ if (!/^(src|include)\/[\w\/-]+$/.test(v)) return 'Keep it under src/ or include/, with letters, digits, _ - and /.'; return v === e.name ? 'That is the current path.' : ''; }
+  if (!/^[A-Za-z_]\w*$/.test(v)) return 'A C name uses letters, digits and _, and does not start with a digit.';
+  if (v === e.word) return 'That is the current name.';
+  if (KW.has(v) || TY.has(v)) return 'That is a C keyword or built-in type.';
+  if (e.kind === 'field' && IDX.structs[e.cands[e.pick][0]].f.some(f => f[0] === v)) return 'This struct already has a field with that name.';
+  const same = IDX.alias[v] && addressOf(v) != null && addressOf(v) === addressOf(e.word);  /* the name this symbol already has elsewhere */
+  if (!same && e.kind !== 'field' && e.kind !== 'local' && (IDX.defs[v] || IDX.structs[v] || IDX.addr[v] || IDX.macros[v])) return 'This name is already used in the code.';
+  return '';
+}
+function draft(){ return {nn: $('nn') ? $('nn').value.trim() : '', why: $('why') ? $('why').value.trim() : '', mv: !!($('mv') && $('mv').checked)}; }
+const sentKey = e => e.kind === 'field' ? SN(e.cands[e.pick][0]) + '.' + e.word : e.kind === 'local' ? null : e.name;
+const elKey = e => e.kind + ':' + (e.kind === 'local' ? e.fn + '.' + e.word : sentKey(e));
+function saveDraft(){ if (!el || el.infra) return; const d = draft(), k = elKey(el); if (d.nn || d.why || d.mv) DRAFTS[k] = d; else delete DRAFTS[k]; store.set('drafts', DRAFTS); }
+function sentBlock(e){
+  const k = sentKey(e), x = k && SENT.get(k); if (!x) return '';
+  return `<div class="sentnote">Already suggested in <a href="https://github.com/${IDX.repo}/issues/${x.n}" target="_blank" rel="noopener">issue #${x.n}</a>${x.nw ? `: <code>${esc(x.nw)}</code>` : ''}. Found more? Add it there as a comment.</div>`;
+}
+/* The real C name another file already gives this placeholder (`frame_time __asm__("D_0015ED6C")`). */
+let RNAME = null;
+function realName(w){
+  if (!RNAME){
+    RNAME = {};  /* prefer the plain name over per-file variants like frame_time_2080b0 or frame_time_gp */
+    const rank = k => (/_(gp|lui|macro|const|[a-z]|[0-9a-f]{4,})$/i.test(k) ? 1000 : 0) + k.length;
+    for (const [k, v] of Object.entries(IDX.alias)) if (!KW.has(k) && !TY.has(k) && !/^(fun|func|d|sub)_(l\d\d_)?[0-9a-f]/i.test(k)){ const o = RNAME[v.toLowerCase()]; if (!o || rank(k) < rank(o)) RNAME[v.toLowerCase()] = k; }
+  }
+  return /^(fun|func|d|sub)_/i.test(w) ? RNAME[w.toLowerCase()] : null;
+}
+function ideaBlock(e){
+  const rn = (e.kind === 'function' || e.kind === 'global') && realName(e.word);
+  if (rn) return `<div class="idea"><div><div class="lbl">Already named in other files. Use the same name here.</div><code>${esc(rn)}</code></div><button class="ghost" type="button" id="useidea" data-v="${esc(rn)}">Use this name</button></div>`;
+  const ch = e.kind === 'global' && cheatsOf(e.word);
+  if (ch){
+    const one = x => `${esc(x[0])}${x[1] ? ` <span class="faint">(+${hex(x[1], 1)})</span>` : ''}`;
+    return `<div class="idea"><div><div class="lbl">Public cheat codes for the US game write here. Use them as a clue, then check in PCSX2.</div><div class="cheats">${ch.slice(0, 4).map(one).join('<br>')}${ch.length > 4 ? `<br><span class="faint">and ${ch.length - 4} more</span>` : ''}</div></div></div>`;
+  }
+  if (e.kind !== 'function') return '';
+  const i = ideaOf(e.word); if (!i || i[0] === e.word) return '';
+  const known = IDX.alias[i[0]] && addressOf(i[0]) != null && addressOf(i[0]) === addressOf(e.word);
+  return `<div class="idea"><div><div class="lbl">${known ? 'Other files already call it this' : 'Idea from the repo · ' + esc(i[1]) + (i[2] ? ' · ' + esc(i[2]) : '')}. Check it, then use it.</div><code>${esc(i[0])}</code></div><button class="ghost" type="button" id="useidea" data-v="${esc(i[0])}">Use this name</button></div>`;
+}
+function renderCard(){
+  const c = $('card'), e = el; if (!e){ c.hidden = true; placeCard(); return; }
+  const first = c.hidden;
+  const keep = draft(), saved = !e.infra && DRAFTS[elKey(e)] || {}; c.hidden = false;
+  if (!keep.nn && !keep.why){ keep.nn = saved.nn || ''; keep.why = saved.why || ''; keep.mv = saved.mv ?? MOVE; }  /* picked from Ready to move: the move is already ticked */
+  let body;
+  if (e.infra) body = `<div class="small">This is part of the build setup or the compiler, not a name from the game, so there is nothing to rename here.</div>`;
+  else {
+    const path = e.kind === 'file' || e.kind === 'folder';
+    const pick = e.kind === 'field' && e.cands.length > 1 ? `<label class="full" for="st">Which struct? ${e.cands.length} have a field called ${esc(e.word)}<select id="st">${e.cands.map((x,i) => `<option value="${i}"${i===e.pick?' selected':''}>${esc(SN(x[0]))}${x[0].includes('@') ? ' — ' + esc(x[0].split('@')[1].split('/').pop()) : ''}${x[1]!=null?'  (+'+hex(x[1],1)+')':''}</option>`).join('')}</select></label>` : '';
+    body = `${sentBlock(e)}${ideaBlock(e)}${whereBlock(e)}${facts(e)}${dataBlock(e, keep.mv)}${usesBlock(e)}
+      <div class="form">${pick}
+        <label for="nn">${path ? 'New path' : 'Better name'}<input class="nn" id="nn" autocomplete="off" spellcheck="false" placeholder="${esc(path ? e.name : e.word)}" value="${esc(keep.nn || (path ? e.name : ''))}"></label>
+        <label for="why">How do you know?<input id="why" autocomplete="off" placeholder="One line is enough, e.g. counts down before the HUD icon fades" value="${esc(keep.why)}"></label>
+      </div>
+      <div class="send-row"><a class="send" id="send" target="_blank" rel="noopener">Suggest it on GitHub ↗</a><button class="ghost" id="addb" type="button">Add to draft issue</button><span class="faint">GitHub opens a filled-in issue. Sign in there and press Submit.</span><span class="bad" id="bad"></span></div>`;
+  }
+  c.innerHTML = `<div class="grip" id="grip" role="separator" aria-orientation="horizontal" aria-label="Drag to resize" title="Drag to resize"></div><div class="head"><h2>${heading(e)}</h2><button class="x tog" id="tog" type="button" aria-expanded="${FULL}">${FULL ? 'Hide ▾' : 'Open ▴'}</button><button class="x" id="close" type="button">Close</button></div>${peek(e)}<div class="cwrap"><div class="cbody">${body}</div></div>`;
+  c.classList.toggle('min', !FULL); c.querySelector('.cbody').inert = !FULL;
+  if (first){  /* appear already folded: no transition from open to folded, just a slide up from below */
+    placeCard();
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches){  /* slide up to the live fold height, which may still change as facts arrive */
+      c.style.transition = 'none'; c.style.transform = 'translateY(100%)'; c.offsetHeight; c.style.transition = ''; c.style.transform = '';
+      placeCard.entering = true; clearTimeout(placeCard.e); placeCard.e = setTimeout(() => placeCard.entering = false, 400);
+    }
+  } else placeCard();
+  grip(c);
+  c.onclick = ev => { if (ev.target.closest('#close') || ev.target.closest('#grip') || grip.moved){ grip.moved = false; return; } if (!FULL || ev.target.closest('.head')) setFull(!FULL); };
+  $('close').onclick = () => { el = null; uses = null; renderCard(); markWord(); };
+  if ($('st')) $('st').onchange = ev => { e.pick = +ev.target.value; select(e); };
+  if ($('how')) $('how').onclick = () => openHelp(e);
+  if ($('trybtn') && e.kind === 'field') $('trybtn').onclick = () => { const h = fixedHome(e), v = finfo(e);
+    openTry({a: h[1] + e.cands[e.pick][1], size: [1, 2, 4].includes(v.el) ? v.el : 4, label: h[2] + '.' + e.word, lv: where(h[0]).lv, flt: v.flt}); };
+  else if ($('trybtn')) $('trybtn').onclick = () => { const w = where(e.word), r = recordPath(e.word, 0), g = IDX.gtype[e.word] || IDX.gtype[IDX.alias[e.word]];
+    const f = r && r.last && IDX.structs[r.last[0]].f.find(x => x[0] === r.last[1]), z = f ? (f[5] || f[4]) : g && g[1];
+    const ty = f ? f[3] : g && g[0];
+    openTry({a: w.a, size: [1, 2, 4].includes(z) ? z : 4, label: srcName(e.word) + (r ? r.path : ''), lv: w.lv, flt: FLT.test(ty || '')}); };
+  if ($('lvsel')) $('lvsel').onchange = ev => { setLV(ev.target.value); renderCard(); };
+  if ($('nn')){ $('nn').oninput = $('why').oninput = () => { clearTimeout(link.t); link.t = setTimeout(() => { saveDraft(); link(); }, 150); }; link(); }
+  if ($('useidea')) $('useidea').onclick = () => { $('nn').value = $('useidea').dataset.v; if (!$('why').value) $('why').value = 'Checked in PCSX2: '; saveDraft(); link(); $('why').focus(); };
+  if ($('addb')) $('addb').onclick = addToBasket;
+  if ($('mv')) $('mv').onchange = () => { saveDraft(); link(); };
+  c.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => copy(b.dataset.copy));
+  c.querySelectorAll('[data-go]').forEach(b => b.onclick = async ev => {
+    ev.stopPropagation(); setFull(false); placeCard(); await openFile(b.dataset.go, +b.dataset.ln);
+    const r = $('L' + b.dataset.ln); if (r && !matchMedia('(min-width:881px)').matches) r.scrollIntoView({block:'center'});  /* phones scroll the page, not the code pane */
+  });
+}
+/* Leave room under the code for the folded card, and fold it by exactly its hidden height. */
+function placeCard(){
+  const c = $('card'), wide = matchMedia('(min-width:881px)').matches;
+  let vis = 0;
+  if (!c.hidden){  /* new content only re-places the card; the slide is kept for Open and Hide */
+    const pk = c.querySelector('.peek') || c.querySelector('.head'); vis = Math.ceil(pk.getBoundingClientRect().bottom - c.getBoundingClientRect().top + 14);
+    const still = !placeCard.entering; if (still) c.style.transition = 'none';
+    c.style.setProperty('--off', Math.max(0, c.offsetHeight - vis) + 'px'); if (still){ c.offsetHeight; c.style.transition = ''; }
+  }
+  $('code').style.paddingBottom = wide && vis ? vis + 'px' : '';
+  document.body.style.paddingBottom = !wide && vis ? vis + 'px' : '';
+  document.body.style.setProperty('--cardh', !wide && vis ? vis + 'px' : '0px');
+}
+addEventListener('resize', () => { clearTimeout(placeCard.t); placeCard.t = setTimeout(placeCard, 100); });
+/* The top edge drags the card taller or shorter; the height is kept for the next visit. */
+function cardMax(){ const c = $('card'); return matchMedia('(min-width:881px)').matches ? c.parentNode.clientHeight - 16 : innerHeight * .85; }
+function sizeCard(h){ const c = $('card'); if (!h){ c.style.height = ''; return; } c.style.height = Math.round(Math.max(160, Math.min(cardMax(), h))) + 'px'; }
+function grip(c){
+  const g = $('grip'); sizeCard(store.get('cardh', 0));
+  g.onpointerdown = ev => {
+    ev.preventDefault(); g.setPointerCapture(ev.pointerId);
+    const y0 = ev.clientY, h0 = c.getBoundingClientRect().height; grip.moved = false;
+    if (!FULL) setFull(true);
+    c.style.transition = 'none';
+    g.onpointermove = m => { if (Math.abs(m.clientY - y0) > 3) grip.moved = true; sizeCard(h0 + y0 - m.clientY); };
+    g.onpointerup = g.onpointercancel = () => { g.onpointermove = g.onpointerup = g.onpointercancel = null; c.style.transition = ''; if (grip.moved) store.set('cardh', c.getBoundingClientRect().height); placeCard(); setTimeout(() => grip.moved = false, 0); };
+  };
+  g.ondblclick = () => { store.set('cardh', 0); sizeCard(0); placeCard(); };
+}
+function setFull(f){
+  FULL = f; const c = $('card'); c.classList.toggle('min', !f); c.querySelector('.cbody').inert = !f;
+  $('tog').textContent = f ? 'Hide ▾' : 'Open ▴'; $('tog').setAttribute('aria-expanded', f);
+}
+/* The small card: the facts worth a glance, so the code stays visible until the panel is opened. */
+function peek(e){
+  if (e.infra) return '<div class="peek"><span>Build setup, nothing to rename</span></div>';
+  const out = [];
+  if (e.kind === 'function' || e.kind === 'global'){ const w = where(e.word); if (w.a != null) out.push(`<code>${hex(w.a)}</code>${w.lv ? ' in level ' + w.lv : ''}`); }
+  if (e.kind === 'field'){ const o = e.cands[e.pick][1]; if (o != null) out.push(`offset <code>+${hex(o, 1)}</code>`); }
+  const d = e.kind === 'global' && dataOf(e.word);
+  if (d) out.push((isBss(d) ? 'bss' : d[1] ? '<span class="ok">data in C</span>' : 'data in assembly') + (d[2] ? `, ${d[2].toLocaleString('en')} bytes` : '') + (movable(d) ? ', <span class="or">ready to move</span>' : ''));
+  if (uses && uses.list) out.push(`used in ${plural(uses.list.length, 'place', 'places')}`);
+  const k = sentKey(e), i = e.kind === 'function' && ideaOf(e.word), rn = (e.kind === 'function' || e.kind === 'global') && realName(e.word);
+  if (rn) out.push(`<span class="ok">named elsewhere: ${esc(rn)}</span>`);
+  else if (k && SENT.get(k)) out.push('<span class="ok">already suggested</span>');
+  else if (i && i[0] !== e.word) out.push(`<span class="or">name idea: ${esc(i[0])}</span>`);
+  else if (e.kind === 'global' && cheatsOf(e.word)) out.push(`<span class="or">cheat: ${esc(cheatsOf(e.word)[0][0])}</span>`);
+  if (DRAFTS[elKey(e)]) out.push('<span class="or">draft saved</span>');
+  return out.length ? `<div class="peek">${out.map(x => `<span>${x}</span>`).join('')}</div>` : '';
+}
+async function copy(v){
+  try { await navigator.clipboard.writeText(v); toast(v.length > 40 ? 'Copied' : 'Copied ' + v); }
+  catch { toast('Select and copy: ' + v); }
+}
+/* Everything one rename needs: yaml facts, rules from docs/code-cleanup.md and every place to change. */
+function spec(e, nn, why, u = uses, mvOn = e === el && draft().mv){
+  const path = e.kind === 'file' || e.kind === 'folder';
+  const old = e.kind === 'local' ? `${e.fn}: ${e.word}` : e.name;
+  const neu = e.kind === 'field' ? SN(e.cands[e.pick][0]) + '.' + nn : e.kind === 'local' ? `${e.fn}: ${nn}` : nn;
+  const same = nn === e.word, title = same ? `Move ${WHAT[e.kind].toLowerCase()} ${old}` : `${path ? 'Move' : 'Rename'} ${WHAT[e.kind].toLowerCase()} ${old} → ${neu}`;
+  const at = e.kind === 'field' ? [IDX.structs[e.cands[e.pick][0]].p, e.cands[e.pick][2]] : e.kind === 'local' ? [e.path, e.range[0]] : IDX.defs[e.word] || (IDX.structs[e.key || e.word] ? [IDX.structs[e.key || e.word].p, IDX.structs[e.key || e.word].l] : IDX.macros[e.word] || (e.kind === 'file' ? [e.name, null] : null));
+  const wa = e.kind === 'function' || e.kind === 'global' ? where(e.word) : {};
+  const link = IDX.alias[e.word] || e.word, st = e.kind === 'field' ? SN(e.cands[e.pick][0]) : null, lvl = [at ? at[0] : '', ...((u && u.list) || []).map(x => x[0])].some(p => /^src\/overlays\//.test(p));
+  const head = [`kind: ${e.kind}`, `old: ${e.kind === 'local' ? e.word : e.kind === 'field' ? e.word : e.name}`, `new: ${nn}`];
+  if (st) head.push(`struct: ${st}`, `offset: ${e.cands[e.pick][1] != null ? hex(e.cands[e.pick][1], 1) : 'unknown'}`);
+  if (e.kind === 'local') head.push(`function: ${e.fn}`, `lines: ${e.path}:${e.range[0]}-${e.range[1]}`);
+  if (link !== e.word) head.push(`linker_symbol: ${link}`);
+  if (at) head.push(`declared: ${at[0]}${at[1] ? ':' + at[1] : ''}`);
+  if (wa.a != null) head.push(`address: ${hex(wa.a)}${wa.lv ? ' (level ' + wa.lv + ')' : ''}`);
+  const dd = e.kind === 'global' && dataOf(e.word), mv = dd && movable(dd) && mvOn, lvd = dd && dd[0].startsWith('level ');
+  const chs = e.kind === 'global' && cheatsOf(e.word);
+  if (chs) head.push(`cheats: ${chs.slice(0, 6).map(x => x[0] + (x[1] ? ' (+' + hex(x[1], 1) + ')' : '')).join('; ')}`);
+  if (dd){ const g = IDX.gtype[e.word] || IDX.gtype[link]; head.push(`section: ${dd[0]}`, ...(dd[2] ? [`size: ${dd[2]}`] : []), ...(g ? [`type: ${g[0]}`] : []), `in_c: ${dd[1] ? 'yes' : 'no'}`); if (mv) head.push(`move_to: ${dd[3][0]}`); }
+  head.push(`commit: ${IDX.commit}`);
+  const keep = `Keep the linker symbol: every declaration gets \`__asm__("${link}")\` so the build does not change (docs/code-cleanup.md).`;
+  const how = {
+    function: [`Rename the C function \`${e.word}\` to \`${nn}\` at every place below.`, keep],
+    global: [`Rename the global \`${e.word}\` to \`${nn}\` at every place below.`, keep, 'Declare it once, in a header, and drop the other extern lines.'],
+    field: [`Rename the field \`${e.word}\` to \`${nn}\` in \`${st}\` and in every access to it below.`, ...(e.cands && e.cands.length > 1 ? [`${e.cands.length} structs have a field called \`${e.word}\`: change only accesses whose object is a \`${st}\`.`] : [])],
+    local: [`Rename \`${e.word}\` to \`${nn}\` inside \`${e.fn}\` only.`],
+    type: [`Rename the type \`${e.word}\` to \`${nn}\` at every place below.`],
+    macro: [`Rename the macro \`${e.word}\` to \`${nn}\` at every place below.`],
+    file: [`\`git mv ${e.name} ${nn}\`, fix the \`#include\` lines below, and in the same commit update the unit path in ${lvl ? '`config/overlays/us/functions.tsv`' : '`config/us/rnc1.us.yaml`'}.`],
+    folder: [`\`git mv ${e.name} ${nn}\`, fix the \`#include\` lines below, and in the same commit update the unit paths in ${lvl ? '`config/overlays/us/functions.tsv`' : '`config/us/rnc1.us.yaml`'}.`],
+    name: [`Rename \`${e.word}\` to \`${nn}\` at every place below.`],
+  }[e.kind] || [];
+  if (same) how.length = 0;
+  if (mv){
+    const lv = lvd ? `--level ${+dd[0].slice(6)} --overlays DIR ` : '';
+    how.push(`Move it into \`${dd[3][0]}\`, its only C reader. First check that no assembly reads it: \`python3 scripts/data-refs.py${lv ? ' ' + lv.trim() : ''}\`; if more code reads it, keep it in assembly.`,
+      lvd || /data$/.test(dd[0]) ? `\`python3 scripts/data-refs.py ${lv}--emit 0x${link.slice(-8)} --into ${dd[3][0]}\` writes the definition after the file's functions and its ${lvd ? 'row in `config/overlays/us/data.tsv`' : 'entry in `configure.py`'} (docs/code-cleanup.md, Data).`
+        : `Define it after the file's functions with the values \`python3 scripts/data-refs.py\` prints, and add its entry to the matching \`*_OVERLAYS\` table in \`configure.py\` (\`--emit\` covers \`.data\` only).`,
+      'Drop it from `config/us/symbol_addrs.txt` if it is listed there.');
+  }
+  how.push(`The output must stay byte-identical: \`make\`${lvl || lvd ? ' and `make overlays`' : ''} end with PASS.`);
+  const by = new Map(); ((u && u.list) || []).forEach(x => (by.get(x[0]) || by.set(x[0], []).get(x[0])).push(x[1]));
+  return {key: elKey(e), sent: sentKey(e), title: mv ? `${title}${same ? '' : ' and'} ${same ? 'into' : 'move it into'} ${dd[3][0].split('/').pop()}` : title, oldN: old, newN: neu, head, why, how, rows: [...by].map(([f, ls]) => `${f}: ${[...new Set(ls)].join(', ')}`),
+    total: u && u.list ? u.list.length : 0, files: by.size, likely: e.kind === 'field' && e.cands.length > 1,
+    grep: path ? `git grep -n "${e.name}" -- src include` : `git grep -nw ${e.word} -- src include`};
+}
+/* One issue for one or many renames; place lists shrink, longest first, until the URL fits GitHub's limit. */
+function issueURL(items){
+  const one = items.length === 1, H = one ? '###' : '####';
+  let title = one ? items[0].title : `Rename ${items.length} names: ` + items.map(x => `${x.oldN} → ${x.newN}`).join(', ');
+  if (title.length > 200) title = title.slice(0, 199) + '…';
+  const part = (x, n, i) => [...(one ? [] : [`## ${i + 1}. ${x.title}`, '']), `${H} Rename`, '```yaml', ...x.head, '```', '', `${H} Why`, x.why || '_(not given)_', '', `${H} How to apply`, ...x.how.map(h => '- ' + h), '',
+    ...(x.rows.length ? [`${H} Every place (${x.total} ${x.likely ? 'likely ' : ''}in ${plural(x.files, 'file', 'files')})`, '```text', ...x.rows.slice(0, n), ...(n < x.rows.length ? [`… ${x.rows.length - n} more files: run the check below`] : []), '```', `Check: \`${x.grep}\``, ''] : [])];
+  const build = ns => [...(one ? [] : [`${items.length} renames from the Naming Desk. One PR, one commit per rename.`, '']), ...items.flatMap((x, i) => part(x, ns[i], i)), '<sub>Sent from the Lombyte Naming Desk.</sub>'].join('\n');
+  const url = b => `https://github.com/${IDX.repo}/issues/new?` + new URLSearchParams({template: 'naming.md', title, body: b, labels: 'naming'});
+  const cut = k => items.map(x => Math.min(x.rows.length, k)), fits = k => url(build(cut(k))).length < 7800;
+  let lo = 0, hi = Math.max(0, ...items.map(x => x.rows.length));
+  if (fits(hi)) return url(build(cut(hi)));
+  while (lo < hi){ const m = (lo + hi + 1) >> 1; if (fits(m)) lo = m; else hi = m - 1; }
+  return url(build(cut(lo)));
+}
+function link(){
+  const e = el, d = draft(), {why} = d, nn = newName(e, d), err = valid(e, nn, d.mv), a = $('send');
+  $('bad').textContent = d.nn ? err : '';
+  a.setAttribute('aria-disabled', err ? 'true' : 'false');
+  $('addb').disabled = !!err || !uses;
+  if (err){ a.removeAttribute('href'); return; }
+  a.href = issueURL([spec(e, nn, why)]);
+}
+function addToBasket(){
+  clearTimeout(link.t); saveDraft();
+  const d = draft(), {why} = d, nn = newName(el, d); if (valid(el, nn, d.mv) || !uses) return;
+  const x = spec(el, nn, why), i = BASKET.findIndex(b => b.key === x.key);
+  if (i >= 0) BASKET[i] = x; else BASKET.push(x);
+  store.set('basket', BASKET); delete DRAFTS[x.key]; store.set('drafts', DRAFTS);
+  basketCount(); toast('Added to the draft issue', {label: `Open (${BASKET.length})`, fn: openBasket});
+}
+function basketCount(){ $('bcount').textContent = BASKET.length; $('basketBtn').classList.toggle('has', BASKET.length > 0); }
+function openBasket(){
+  const d = $('drawer'), n = BASKET.length;
+  d.querySelector('h2').textContent = 'Draft issue';
+  $('dsub').textContent = n ? `${plural(n, 'rename', 'renames')}, sent together as one issue` : '';
+  $('dbody').innerHTML = n ? BASKET.map((x, i) => `<div class="bitem"><div><code>${esc(x.oldN)}</code> → <code>${esc(x.newN)}</code><div class="faint">${esc(x.why || 'no reason given')}</div></div><button class="ghost sm" type="button" data-rm="${i}">Remove</button></div>`).join('')
+      + `<div class="send-row"><a class="send" href="${esc(issueURL(BASKET))}" target="_blank" rel="noopener">Send ${n === 1 ? 'it' : 'all ' + n} as one issue ↗</a><button class="ghost" type="button" id="bclear">Discard draft</button></div>`
+    : '<p class="bempty">Nothing here yet. Pick a name, type a better one and press <b style="white-space:nowrap">Add to draft issue</b>. Collect a few, then send them as one issue.</p>';
+  $('dfoot').innerHTML = 'Your draft stays here, even if you close the page.<br>After you send the issue, press Discard draft.';
+  $('dbody').querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { BASKET.splice(+b.dataset.rm, 1); store.set('basket', BASKET); basketCount(); openBasket(); });
+  if ($('bclear')) $('bclear').onclick = () => { BASKET = []; store.set('basket', BASKET); basketCount(); openBasket(); };
+  d.hidden = false; requestAnimationFrame(() => d.classList.add('in'));
+  $('dclose').focus();
+}
+$('basketBtn').onclick = openBasket;
+
+$('dclose').onclick = closeHelp;
+/* A click outside the open panel closes it; the buttons that open it are left alone. */
+document.addEventListener('pointerdown', ev => { const d = $('drawer'); if (d.hidden || !d.classList.contains('in') || !$('welcome').hidden) return; if (d.contains(ev.target) || ev.target.closest('[aria-controls="drawer"]')) return; closeHelp(); });
+/* Welcome note: shown once per browser, gone for good after it is closed. */
+function closeWelcome(){ $('welcome').hidden = true; store.set('welcomed', 1); }
+if (!store.get('welcomed', 0)){
+  setTimeout(() => { $('welcome').hidden = false; $('wgo').focus(); }, document.documentElement.classList.contains('enter') ? 900 : 300);
+  $('wgo').onclick = closeWelcome;
+  $('welcome').addEventListener('click', ev => { if (ev.target.id === 'welcome') closeWelcome(); });
+  $('wbug').onclick = ev => { ev.preventDefault(); closeWelcome(); $('bug').click(); window.open($('bug').href, '_blank', 'noopener'); };
+}
+/* Bugs in the page go to the game repo's bug template, with what was open so it can be reproduced. */
+$('bug').addEventListener('click', () => {
+  const what = el ? `${WHAT[el.kind]} ${el.kind === 'field' ? el.name : el.word || el.name}` : 'nothing selected';
+  const body = ['### What happened', '', '', '### What you expected', '', '', '### How to see it', '', '', '### Where', '```text', `page: Naming Desk preview`, `code commit: ${IDX ? IDX.commit : '?'}`, `file: ${cur || '-'}`, `selected: ${what}`, `level: ${LV || '-'}`, `view: ${MODE}`, `browser: ${navigator.userAgent}`, `screen: ${innerWidth}x${innerHeight}`, '```'].join('\n');
+  $('bug').href = `https://github.com/${IDX ? IDX.repo : 'lombyte-project/lombyte'}/issues/new?` + new URLSearchParams({template: 'bug.md', title: 'Bug: Naming Desk: ', body, labels: 'bug'});
+});
+/* Back to the top: shows once the page or the code has scrolled down. */
+const topCheck = () => $('totop').classList.toggle('on', scrollY > 300 || $('code').scrollTop > 300);
+addEventListener('scroll', topCheck, {passive: true}); $('code').addEventListener('scroll', topCheck, {passive: true});
+$('totop').onclick = () => { const b = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'; scrollTo({top: 0, behavior: b}); $('code').scrollTo({top: 0, behavior: b}); };
+/* Names already sent: a snapshot from the build, then the live list of open issues labelled naming. */
+function addSent(x){ for (const it of x.items) SENT.set(it.kind === 'field' && it.struct ? it.struct + '.' + it.old : it.old, {n: x.n, nw: it.new}); }
+/* GitHub allows 60 anonymous API calls an hour, so the open issues are kept for 10 minutes and reused if a call fails. */
+async function loadSent(){
+  try {
+    const c = store.get('sentc', null); let list = c && Date.now() - c.t < 6e5 ? c.list : null;
+    if (!list){
+      const r = await fetch(`https://api.github.com/repos/${IDX.repo}/issues?labels=naming&state=open&per_page=100`, {headers: {Accept: 'application/vnd.github+json'}}).catch(() => null);
+      if (r && r.ok){ list = (await r.json()).map(x => ({number: x.number, body: x.body})); store.set('sentc', {t: Date.now(), list}); }
+      else list = c ? c.list : [];
+    }
+    for (const is of list){
+      const items = [...(is.body || '').matchAll(/```yaml\s*\n([\s\S]*?)```/g)].map(m => Object.fromEntries([...m[1].matchAll(/^(\w+):\s*(.+)$/gm)].map(x => [x[1], x[2].trim()]))).filter(y => y.old);
+      if (items.length) addSent({n: is.number, items});
+    }
+    renderList(); if (el) renderCard();
+  } catch {}
+}
+/* Back to the homepage: the desk fades out, then the browser goes there. */
+$('home').addEventListener('click', ev => {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches || ev.metaKey || ev.ctrlKey) return;
+  ev.preventDefault(); document.documentElement.classList.add('leave');
+  try { sessionStorage.setItem('lb.go', 'home'); } catch {}
+  setTimeout(() => location.href = $('home').href, 340);
+});
+addEventListener('pageshow', ev => { if (ev.persisted) document.documentElement.classList.remove('leave', 'enter'); });
+document.addEventListener('keydown', ev => { if (ev.key !== 'Escape') return; if (!$('welcome').hidden) closeWelcome(); else if (!$('drawer').hidden) closeHelp(); });
+(async () => {
+  try { IDX = await load('_index'); }
+  catch (err) { $('path').textContent = 'The code could not be loaded'; $('code').innerHTML = `<div class="msg"><h3>Something went wrong</h3><span>Reload the page to try again. (${esc(err.message)})</span></div>`; return; }
+  IDX.byPath = Object.fromEntries(IDX.files.map(f => [f.p, f]));
+  IDX.tree = buildTree();
+  IDX.typedefs = new Set(IDX.typedefs); IDX.fnames = new Set(IDX.fnames); IDX.afn = new Set(IDX.afn); IDX.infra = new Set(IDX.infra);
+  IDX.names = [...new Set([...Object.keys(IDX.structs).map(SN), ...Object.keys(IDX.defs), ...Object.keys(IDX.addr)])];
+  IDX.names.structSet = new Set(Object.keys(IDX.structs).map(SN));
+  $('commit').textContent = IDX.commit.slice(0, 10);
+  basketCount(); setMode(MODE); setMode.on = true;
+  load('_queue').then(q => { QD = q; for (const x of q.sent) addSent(x); renderList(); if (el) renderCard(); loadSent(); }).catch(() => {});
+  const last = store.get('file', null), start = last && IDX.byPath[last] ? last : 'src/overlays/shared/ui/hud/002661a0.c';
+  start.split('/').slice(0, -1).forEach((_, i, a) => open.add(a.slice(0, i + 1).join('/')));
+  await openFile(start);
+  setTimeout(() => { fieldIndex(); placesOf(''); ralias(); loadAll(); }, 400);  /* build lookups and unpack the rest of the code while the reader looks around */
+})();
+</script>
+</body>
+</html>
