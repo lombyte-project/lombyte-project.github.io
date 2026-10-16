@@ -624,15 +624,18 @@ async function openNamed(n){
     if (i >= 0){ await openFile(f.p, t.slice(0, i).split('\n').length); return select({kind: nameKind(n) === 'function' ? 'function' : 'global', word:n}); }
   }
 }
+/* Where to show a function: its C body, else (extern only, or assembly) the first C line that calls it. */
+async function fnCode(n){
+  const at = IDX.defs[n];
+  if (at && !(await fnBody(n) || {}).asm) return at;
+  const u = await findUses({kind:'function', word:n}), c = u.list.find(x => x[3]) || u.list[0];
+  return c ? [c[0], c[1]] : at;
+}
 async function jumpToName(n){
   const key = IDX.structs[n] ? n : Object.keys(IDX.structs).find(k => SN(k) === n);
   if (key){ const s = IDX.structs[key]; await openFile(s.p, s.l); return select({kind:'type', word:n, key}); }
-  let at = IDX.defs[n]; const k = nameKind(n);
+  const k = nameKind(n), at = k === 'function' ? await fnCode(n) : IDX.defs[n];
   if (!at && k === 'global') return openGlobal(n);
-  if (at && k === 'function' && (await fnBody(n) || {}).asm){  /* only assembly so far: show the first C line that uses it */
-    const u = await findUses({kind:'function', word:n}), c = u.list.find(x => x[3]) || u.list[0];
-    if (c) at = [c[0], c[1]];
-  }
   if (at) await openFile(at[0], at[1]);
   select(k === 'struct' ? {kind:'type', word:n} : {kind: k === 'function' ? 'function' : 'global', word:n});
 }
@@ -1234,7 +1237,7 @@ function showAsk(reg){
   $('dreg').oninput = ev => { groupReg(ev); decode(); };
 }
 function wire(root){
-  root.querySelectorAll('[data-fn]').forEach(b => b.onclick = async () => { closeHelp(); const n = b.dataset.fn, d = IDX.defs[n]; if (d) await openFile(d[0], d[1]); select({kind:'function', word:n}); });
+  root.querySelectorAll('[data-fn]').forEach(b => b.onclick = async () => { closeHelp(); const n = b.dataset.fn, d = await fnCode(n); if (d) await openFile(d[0], d[1]); select({kind:'function', word:n}); });
   root.querySelectorAll('[data-glob]').forEach(b => b.onclick = () => { closeHelp(); select({kind:'global', word:srcName(b.dataset.glob)}); });
   root.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => copy(b.dataset.copy));
   root.querySelectorAll('[data-go]').forEach(b => b.onclick = () => openFile(b.dataset.go, +b.dataset.ln));
@@ -1417,7 +1420,7 @@ function callsBlock(e){
 async function goFn(n, back){
   if (!back && el && el.kind === 'function') NAV.push(el.word);
   XALL = false; XCOPY = -1;
-  const w = xName(n), at = IDX.defs[w] || IDX.defs[n], word = IDX.defs[w] || !IDX.defs[n] ? w : n;
+  const w = xName(n), word = IDX.defs[w] || !IDX.defs[n] ? w : n, at = await fnCode(word);
   if (at) await openFile(at[0], at[1]);
   XOPEN = true; select({kind: 'function', word}); setFull(true);
 }
