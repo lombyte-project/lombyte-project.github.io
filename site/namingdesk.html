@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Lombyte Naming Desk</title>
+<title>Lombyte • Naming Desk</title>
 <meta name="description" content="Know Ratchet &amp; Clank? Click a placeholder name in the Lombyte decompilation, check it in PCSX2 and suggest a real name as a GitHub issue. No coding needed.">
 <link rel="canonical" href="https://lombyte-project.github.io/namingdesk">
 <link rel="alternate" type="application/json" href="namingdesk.json" title="Naming Desk tasks for AI">
@@ -88,7 +88,7 @@ h1 span{color:var(--orange)}
 .id:hover{background:var(--hover);text-decoration:underline dotted var(--orange-line);text-underline-offset:3px}
 .id.on{background:var(--orange-bg);color:var(--fg);text-decoration:underline solid var(--orange);text-underline-offset:3px}
 .inc{cursor:pointer;text-decoration:underline dotted var(--dim);text-underline-offset:3px}
-.k{color:var(--kw)} .t{color:var(--ty)} .nu{color:var(--num)} .s{color:var(--str)} .c{color:var(--com);font-style:italic} .pp{color:var(--soft)}
+.k{color:var(--kw)} .t{color:var(--ty)} .nu{color:var(--num)} .s{color:var(--str)} .c{color:var(--com);font-style:italic} .pp{color:var(--kw)}
 .msg{padding:30px 20px;color:var(--soft);max-width:66ch;display:flex;flex-direction:column;gap:8px}
 .msg h3{color:var(--fg);margin:0;font-size:17px}
 .msg a{color:var(--orange)}
@@ -414,8 +414,8 @@ html.leave .wrap{transition:opacity .35s ease,transform .35s ease,filter .35s ea
 <script>
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const KW = new Set('if else for while do return switch case break continue default goto sizeof static extern const volatile struct union typedef enum inline register'.split(' '));
-const TY = new Set('void int char short long float double unsigned signed u8 u16 u32 u64 s8 s16 s32 s64 f32 f64 b32 vs8 vu8 vs16 vu16 vs32 vu32 vs64 vu64'.split(' '));
+const KW = new Set('if else for while do return switch case break continue default goto sizeof static extern const volatile struct union typedef enum inline register auto asm __asm__ __attribute__ __inline__ __volatile__ __typeof__ __extension__'.split(' '));
+const TY = new Set('void int char short long float double unsigned signed u8 u16 u32 u64 s8 s16 s32 s64 f32 f64 b32 vs8 vu8 vs16 vu16 vs32 vu32 vs64 vu64 s128 u128'.split(' '));
 /* Build switches people meet in the code, said in plain words. */
 const INFRA_NOTE = {
   NON_MATCHING: 'NON_MATCHING marks a draft: C that works but does not compile to exactly the original yet. The build still uses the original assembly, so the draft can be read and improved without breaking anything. It is part of the build, not a name from the game, so there is nothing to rename here.',
@@ -643,22 +643,30 @@ async function jumpToName(n){
 function ids(s, word){ let out = '', last = 0, m; const re = /[A-Za-z_]\w*/g; while ((m = re.exec(s))){ out += esc(s.slice(last, m.index)) + span(m[0], word); last = re.lastIndex; } return out + esc(s.slice(last)); }
 /* C keywords and built-in types are part of the language, not names: shown, never clickable. */
 const span = (w, word, extra = '') => KW.has(w) || TY.has(w) ? `<span class="${TY.has(w) ? 't' : 'k'}">${w}</span>` : `<span class="id${extra}${w===word?' on':''}">${w}</span>`;
-function hl(line, isC, word){
-  const inc = /^(\s*#\s*include\s*)(["<])([^">]+)([">])(.*)$/.exec(line);
-  if (inc) return `<span class="pp">${esc(inc[1] + inc[2])}<span class="inc" data-inc="${esc(inc[3])}">${esc(inc[3])}</span>${esc(inc[4] + inc[5])}</span>`;
-  if (!isC) return ids(line, word);
-  if (/^\s*#/.test(line)) return '<span class="pp">' + ids(line, word) + '</span>';
-  const re = /(\/\*.*?\*\/|\/\*.*$|\/\/.*$)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|\b(0x[0-9A-Fa-f]+|\d+(?:\.\d+)?f?)\b|([A-Za-z_]\w*)/g;
-  let out = '', last = 0, m;
-  while ((m = re.exec(line))){
-    out += esc(line.slice(last, m.index)); last = re.lastIndex;
-    if (m[1]) out += '<span class="c">' + esc(m[1]) + '</span>';
-    else if (m[2]) out += '<span class="s">' + esc(m[2]) + '</span>';
-    else if (m[3]) out += '<span class="nu">' + m[3] + '</span>';
-    else if (KW.has(m[4])) out += '<span class="k">' + m[4] + '</span>';
-    else out += span(m[4], word, TY.has(m[4]) ? ' t' : '');
+/* One C line to HTML. st carries what the line before left open: a block comment, or a #define ending in a backslash. */
+const TOK = /(\/\*)|(\/\/.*)|("(?:[^"\\]|\\.)*"?|'(?:[^'\\]|\\.)*'?)|(0[xX]\w*|\.?\d(?:[eE][+-]|[\w.])*)|([A-Za-z_]\w*)/g;
+function hl(line, st, word){
+  let out = '', i = 0;
+  if (st.com){ const e = line.indexOf('*/'); if (e < 0) return '<span class="c">' + esc(line) + '</span>'; out = '<span class="c">' + esc(line.slice(0, e + 2)) + '</span>'; i = e + 2; st.com = false; }
+  else if (!st.pp){
+    const d = /^(\s*#\s*[a-z]*)/.exec(line);
+    if (d){
+      out = esc(d[1].slice(0, d[1].indexOf('#'))) + '<span class="pp">' + esc(d[1].trimStart()) + '</span>'; i = d[1].length;
+      const inc = /^(\s*)(["<])([^">]+)([">])/.exec(line.slice(i));
+      if (inc && /include$/.test(d[1])){ out += esc(inc[1]) + `<span class="s">${esc(inc[2])}<span class="inc" data-inc="${esc(inc[3])}">${esc(inc[3])}</span>${esc(inc[4])}</span>`; i += inc[0].length; }
+    }
   }
-  return out + esc(line.slice(last));
+  st.pp = /\\$/.test(line) && (st.pp || /^\s*#/.test(line));
+  TOK.lastIndex = i; let m;
+  while ((m = TOK.exec(line))){
+    out += esc(line.slice(i, m.index)); i = TOK.lastIndex;
+    if (m[1]){ const e = line.indexOf('*/', i); i = e < 0 ? line.length : e + 2; st.com = e < 0; TOK.lastIndex = i; out += '<span class="c">' + esc(line.slice(m.index, i)) + '</span>'; }
+    else if (m[2]) out += '<span class="c">' + esc(m[2]) + '</span>';
+    else if (m[3]) out += '<span class="s">' + esc(m[3]) + '</span>';
+    else if (m[4]) out += '<span class="nu">' + esc(m[4]) + '</span>';
+    else out += span(m[5], word);
+  }
+  return out + esc(line.slice(i));
 }
 function crumbs(p){ const parts = p.split('/'); return esc(parts.slice(0, -1).join('/') + '/') + '<b>' + esc(parts.pop()) + '</b>'; }
 async function openFile(path, line){
@@ -679,16 +687,8 @@ function renderCode(line){
   const isC = /\.(c|h)$/.test(cur), L = fileT.t.replace(/\n$/, '').split('\n');
   const stripe = new Array(L.length).fill('transparent');
   (fileT.f || []).forEach(fn => { for (let i = fn.s; i <= fn.e && i <= L.length; i++) stripe[i-1] = COLOR[fn.k]; });
-  /* text inside a multi-line comment is shown, never clickable: it holds no names to rename */
-  let inCom = false;
-  const draw = l => {
-    if (!isC) return hl(l, isC, null);
-    let pre = '';
-    if (inCom){ const e = l.indexOf('*/'); if (e < 0) return '<span class="c">' + esc(l) + '</span>'; pre = '<span class="c">' + esc(l.slice(0, e + 2)) + '</span>'; l = l.slice(e + 2); inCom = false; }
-    const t = l.replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/g, '""').replace(/\/\*.*?\*\//g, ''), o = t.indexOf('/*'), sl = t.indexOf('//');
-    if (o >= 0 && (sl < 0 || o < sl)) inCom = true;
-    return pre + hl(l, isC, null);
-  };
+  /* text inside a comment is shown, never clickable: it holds no names to rename */
+  const st = {com:false, pp:false}, draw = l => isC ? hl(l, st, null) : ids(l, null);
   $('code').innerHTML = L.map((l, i) => `<div class="row" id="L${i+1}"><span style="background:${stripe[i]}"></span><span class="ln">${i+1}</span><span class="src">${draw(l) || ' '}</span></div>`).join('');
   WORDS = null; markWord(); jumpTo(line);
 }
@@ -704,7 +704,7 @@ function markWord(){
   if (!WORDS){ WORDS = new Map(); for (const sp of c.querySelectorAll('.id')){ const k = sp.textContent; (WORDS.get(k) || WORDS.set(k, []).get(k)).push(sp); } }
   const scope = el.kind === 'local' ? (el.path === cur ? el.range : [0, -1]) : null;
   for (const sp of WORDS.get(w) || []){
-    const row = sp.parentNode.parentNode, n = +row.id.slice(1);
+    const row = sp.closest('.row'), n = +row.id.slice(1);
     if (scope && (n < scope[0] || n > scope[1])) continue;
     sp.classList.add('on'); row.classList.add('hit');
   }
