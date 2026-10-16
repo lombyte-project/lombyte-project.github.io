@@ -250,6 +250,7 @@ textarea{font-family:var(--mono);font-size:13px;line-height:20px;color:var(--fg)
 .addb .spin{width:14px;height:14px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--orange);animation:spin .8s linear infinite}
 .addb:hover{background:var(--orange-bg);color:var(--orange)}
 .sendnote{margin:0}
+.saved{margin-top:-2px}
 .bk.has b{background:var(--orange);color:var(--on-orange)}
 .bk:focus-visible{outline:2px solid var(--orange)}
 .tabs{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:3px;background:var(--bg);border:1px solid var(--line);border-radius:8px}
@@ -1263,7 +1264,7 @@ function valid(e, v, mv){
 function draft(){ return {nn: $('nn') ? $('nn').value.trim() : '', why: $('why') ? $('why').value.trim() : '', mv: !!($('mv') && $('mv').checked)}; }
 const sentKey = e => e.kind === 'field' ? SN(e.cands[e.pick][0]) + '.' + e.word : e.kind === 'local' ? null : e.name;
 const elKey = e => e.kind + ':' + (e.kind === 'local' ? e.fn + '.' + e.word : sentKey(e));
-function saveDraft(){ if (!el || el.infra) return; const d = draft(), k = elKey(el); if (d.nn || d.why || d.mv) DRAFTS[k] = d; else delete DRAFTS[k]; store.set('drafts', DRAFTS); }
+function saveDraft(){ if (!el || el.infra) return; const d = draft(), k = elKey(el); if (d.nn || d.why || d.mv) DRAFTS[k] = d; else delete DRAFTS[k]; store.set('drafts', DRAFTS); if ($('saved')) $('saved').hidden = !DRAFTS[k]; }
 function sentBlock(e){
   const k = sentKey(e), x = k && SENT.get(k); if (!x) return '';
   return `<div class="sentnote">Already suggested in <a href="https://github.com/${IDX.repo}/issues/${x.n}" target="_blank" rel="noopener">issue #${x.n}</a>${x.nw ? `: <code>${esc(x.nw)}</code>` : ''}. Found more? Add it there as a comment.</div>`;
@@ -1307,7 +1308,7 @@ function renderCard(){
       <div class="form">${pick}
         <label for="nn">${path ? 'New path' : 'Better name'}<input class="nn" id="nn" autocomplete="off" spellcheck="false" placeholder="${esc(path ? e.name : e.word)}" value="${esc(keep.nn || (path ? e.name : ''))}"></label>
         <label for="why">How do you know?<input id="why" autocomplete="off" placeholder="One line is enough, e.g. counts down before the HUD icon fades" value="${esc(keep.why)}"></label>
-      </div></li>
+      </div><span class="faint saved" id="saved"${DRAFTS[elKey(e)] ? '' : ' hidden'}>✓ Saved in this browser, so you can come back to it later.</span></li>
       <li><h3>Send it</h3><div class="send-row"><a class="send" id="send" target="_blank" rel="noopener">Suggest it on GitHub ↗</a><button class="ghost addb" id="addb" type="button">+ Add to draft issue</button><span class="bad" id="bad"></span></div><p class="faint sendnote">One name: suggest it now, GitHub opens a filled-in issue and you press Submit. Several names: add each to the draft issue and send them together.</p></li></ol>
       ${more ? `<details class="more-facts"><summary>Details: where it is used, data, file</summary>${more}</details>` : ''}`;
   }
@@ -1389,7 +1390,6 @@ function peek(e){
   else if (k && SENT.get(k)) out.push('<span class="ok">already suggested</span>');
   else if (i && i[0] !== e.word) out.push(`<span class="or">name idea: ${esc(i[0])}</span>`);
   else if (e.kind === 'global' && cheatsOf(e.word)) out.push(`<span class="or">cheat: ${esc(cheatsOf(e.word)[0][0])}</span>`);
-  if (DRAFTS[elKey(e)]) out.push('<span class="or">draft saved</span>');
   return out.length ? `<div class="peek">${out.map(x => `<span>${x}</span>`).join('')}</div>` : '';
 }
 async function copy(v){
@@ -1473,7 +1473,7 @@ function addToBasket(){
   const d = draft(), {why} = d, nn = newName(el, d); if (valid(el, nn, d.mv) || !uses) return;
   const x = spec(el, nn, why), i = BASKET.findIndex(b => b.key === x.key);
   if (i >= 0) BASKET[i] = x; else BASKET.push(x);
-  store.set('basket', BASKET); delete DRAFTS[x.key]; store.set('drafts', DRAFTS);
+  store.set('basket', BASKET); delete DRAFTS[x.key]; store.set('drafts', DRAFTS); if ($('saved')) $('saved').hidden = true;
   basketCount(); toast('Added to the draft issue', {label: `Open (${BASKET.length})`, fn: openBasket});
 }
 function basketCount(){ $('bcount').textContent = BASKET.length; $('basketBtn').classList.toggle('has', BASKET.length > 0); }
