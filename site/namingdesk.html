@@ -238,10 +238,10 @@ textarea{font-family:var(--mono);font-size:13px;line-height:20px;color:var(--fg)
 .menu summary::-webkit-details-marker{display:none}
 .mlist{position:absolute;right:0;top:calc(100% + 4px);z-index:5;display:flex;flex-direction:column;gap:4px;padding:4px;background:var(--raise);border:1px solid var(--line);border-radius:8px;box-shadow:0 12px 30px rgba(0,0,0,.5)}
 .mlist .btn{white-space:nowrap}
-.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:16px;counter-reset:st}
-.steps>li{display:flex;flex-direction:column;gap:10px;counter-increment:st}
-.steps h3{margin:0;font-size:14px;color:var(--fg);display:flex;align-items:center;gap:8px}
-.steps h3::before{content:counter(st);display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--orange-bg);color:var(--orange);font-size:12px}
+.flow{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:16px;counter-reset:st}
+.flow>li{display:flex;flex-direction:column;gap:10px;counter-increment:st}
+.flow h3{margin:0;font-size:14px;color:var(--fg);display:flex;align-items:center;gap:8px}
+.flow h3::before{content:counter(st);display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--orange-bg);color:var(--orange);font-size:12px}
 .more-facts{display:flex;flex-direction:column;gap:10px;font-size:13px;color:var(--dim)}
 .more-facts>summary{cursor:pointer;color:var(--dim)}
 .more-facts[open]>summary{margin-bottom:10px}
@@ -1299,7 +1299,7 @@ function renderCard(){
     const path = e.kind === 'file' || e.kind === 'folder';
     const pick = e.kind === 'field' && e.cands.length > 1 ? `<label class="full" for="st">Which struct? ${e.cands.length} have a field called ${esc(e.word)}<select id="st">${e.cands.map((x,i) => `<option value="${i}"${i===e.pick?' selected':''}>${esc(SN(x[0]))}${x[0].includes('@') ? ' — ' + esc(x[0].split('@')[1].split('/').pop()) : ''}${x[1]!=null?'  (+'+hex(x[1],1)+')':''}</option>`).join('')}</select></label>` : '';
     const wb = whereBlock(e), more = facts(e) + dataBlock(e, keep.mv) + usesBlock(e);
-    body = `${sentBlock(e)}<ol class="steps">${wb ? `<li><h3>Check it in the game</h3>${wb}</li>` : ''}
+    body = `${sentBlock(e)}<ol class="flow">${wb ? `<li><h3>Check it in the game</h3>${wb}</li>` : ''}
       <li><h3>Name it</h3>${ideaBlock(e)}
       <div class="form">${pick}
         <label for="nn">${path ? 'New path' : 'Better name'}<input class="nn" id="nn" autocomplete="off" spellcheck="false" placeholder="${esc(path ? e.name : e.word)}" value="${esc(keep.nn || (path ? e.name : ''))}"></label>
