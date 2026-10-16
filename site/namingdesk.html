@@ -268,6 +268,8 @@ textarea{font-family:var(--mono);font-size:13px;line-height:20px;color:var(--fg)
 .more-facts{display:flex;flex-direction:column;gap:10px;font-size:13px;color:var(--dim)}
 .more-facts>summary{cursor:pointer;color:var(--dim)}
 .more-facts[open]>summary{margin-bottom:10px}
+.more-facts:not([open]){gap:0}
+.more-facts+.more-facts{margin-top:-6px}
 .addb{height:40px;border-color:var(--orange-line);color:var(--orange);font-weight:600}
 .addb.busy{opacity:1;color:var(--soft);gap:8px;cursor:progress}
 .addb .spin{width:14px;height:14px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--orange);animation:spin .8s linear infinite}
