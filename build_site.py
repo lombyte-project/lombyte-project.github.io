@@ -17,6 +17,8 @@ import sys
 
 from PIL import Image
 
+import naming_api
+
 progress = pathlib.Path(sys.argv[1])
 site = sys.argv[2] if len(sys.argv) > 2 else "https://lombyte-project.github.io/"
 out = pathlib.Path("build/site")
@@ -71,5 +73,6 @@ for name in ("index.html", "robots.txt", "sitemap.xml"):
     for key, value in values.items():
         text = text.replace(key, value)
     (out / name).write_text(text)
+naming_api.build(out)  # namingdesk.json, for AI tools
 (out / ".nojekyll").touch()
 print(f"site built in {out}")

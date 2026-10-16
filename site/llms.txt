@@ -1,0 +1,9 @@
+# Lombyte
+
+> Lombyte is a matching decompilation of Ratchet & Clank (PS2, US). Code: https://github.com/lombyte-project/lombyte
+
+## Naming Desk for AI
+
+- [namingdesk.json](https://lombyte-project.github.io/namingdesk.json): names and data worth changing, as tasks with a confidence, evidence, the files to edit and the steps. Read its `guide` first.
+- [Code cleanup rules](https://github.com/lombyte-project/lombyte/blob/main/docs/code-cleanup.md): the rules every change follows.
+- [Naming Desk](https://lombyte-project.github.io/namingdesk): the page for people; `namingdesk#NAME` opens a name.
