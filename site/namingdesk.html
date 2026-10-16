@@ -108,6 +108,7 @@ h1 span{color:var(--orange)}
 @media (max-width:880px){.card{position:fixed;z-index:5;max-height:85dvh}.totop{bottom:calc(var(--cardh,0px) + 24px + env(safe-area-inset-bottom,0px))}.cwrap{flex:1}.cbody{overflow:auto}}
 .peek{display:flex;flex-wrap:wrap;gap:4px 20px;font-size:13px;color:var(--dim)}
 .peek code{font-family:var(--mono);font-size:12.5px;color:var(--soft)}
+.card:not(.min) .peek .clue{display:none}
 .peek .ok{color:var(--exact)}.peek .or{color:var(--orange)}
 .card:not(.min) .head{cursor:pointer}
 .x.tog{color:var(--orange)}
@@ -1386,11 +1387,12 @@ function peek(e){
   if (d) out.push((isBss(d) ? 'bss' : d[1] ? '<span class="ok">data in C</span>' : 'data in assembly') + (d[2] ? `, ${d[2].toLocaleString('en')} bytes` : '') + (movable(d) ? ', <span class="or">ready to move</span>' : ''));
   if (uses && uses.list) out.push(`used in ${plural(uses.list.length, 'place', 'places')}`);
   const k = sentKey(e), i = e.kind === 'function' && ideaOf(e.word), rn = (e.kind === 'function' || e.kind === 'global') && realName(e.word);
-  if (rn) out.push(`<span class="ok">named elsewhere: ${esc(rn)}</span>`);
+  /* Clues repeat what step 2 shows, so they only show while the card is folded. */
+  if (rn) out.push(`<span class="ok clue">named elsewhere: ${esc(rn)}</span>`);
   else if (k && SENT.get(k)) out.push('<span class="ok">already suggested</span>');
-  else if (i && i[0] !== e.word) out.push(`<span class="or">name idea: ${esc(i[0])}</span>`);
-  else if (e.kind === 'global' && cheatsOf(e.word)) out.push(`<span class="or">cheat: ${esc(cheatsOf(e.word)[0][0])}</span>`);
-  return out.length ? `<div class="peek">${out.map(x => `<span>${x}</span>`).join('')}</div>` : '';
+  else if (i && i[0] !== e.word) out.push(`<span class="or clue">name idea: ${esc(i[0])}</span>`);
+  else if (e.kind === 'global' && cheatsOf(e.word)) out.push(`<span class="or clue">cheat: ${esc(cheatsOf(e.word)[0][0])}</span>`);
+  return out.length ? `<div class="peek">${out.map(x => /class="[^"]*clue/.test(x) ? x : `<span>${x}</span>`).join('')}</div>` : '';
 }
 async function copy(v){
   try { await navigator.clipboard.writeText(v); toast(v.length > 40 ? 'Copied' : 'Copied ' + v); }
