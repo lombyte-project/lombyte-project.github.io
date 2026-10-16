@@ -408,7 +408,7 @@ async function gunzip(u){
   return JSON.parse(new TextDecoder().decode(u));
 }
 async function load(name){
-  const r = await fetch('naming-data/t/' + name + '.txt'); if (!r.ok) throw new Error('HTTP ' + r.status);
+  const r = await fetch('naming-data/t/' + name + '.txt?v=@V@'); if (!r.ok) throw new Error('HTTP ' + r.status);
   const b = atob((await r.text()).trim()), u = new Uint8Array(b.length);
   for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i);
   return gunzip(u);
@@ -868,7 +868,7 @@ function steps(e, fp){
   s.push(B('Get ready'));
   s.push([`Run the <b>US</b> game (SCUS-97199) in PCSX2, then <b>Debug → Open Debugger</b>.${lv ? ` Play until level ${lv} is loaded.` : ''}`, pic('open')]);
   /* Resident code and data (boot, the hero) are the same in every level: only per-level ones get a level file. */
-  const sl = lv, sym = f => `<a href="naming-data/sym/${f}.sym" target="_blank" rel="noopener" download>${f}.sym</a>`;
+  const sl = lv, sym = f => `<a href="naming-data/sym/${f}.sym?v=@V@" target="_blank" rel="noopener" download>${f}.sym</a>`;
   s.push([`Optional: to see Lombyte's names in the debugger, add ${sym('boot')}${sl ? ` and ${sym('level-' + sl)} (load condition ${C('[0x15ED84]==0x' + (+sl).toString(16))})` : ''} as ${sl ? 'symbol files' : 'a symbol file'} in the debugger's analysis settings.`, null]);
   if (e.kind === 'function'){
     const a = hex(where(e.word).a);
@@ -1561,13 +1561,13 @@ addEventListener('scroll', topCheck, {passive: true}); $('code').addEventListene
 $('totop').onclick = () => { const b = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'; scrollTo({top: 0, behavior: b}); $('code').scrollTo({top: 0, behavior: b}); };
 /* Names already sent: a snapshot from the build, then the live list of open issues labelled naming. */
 function addSent(x){ for (const it of x.items) SENT.set(it.kind === 'field' && it.struct ? it.struct + '.' + it.old : it.old, {n: x.n, nw: it.new}); }
-/* GitHub allows 60 anonymous API calls an hour, so the open issues are kept for 10 minutes and reused if a call fails. */
+/* GitHub allows 60 anonymous API calls an hour, so the open issues are kept for 10 minutes (or until the next deploy) and reused if a call fails. */
 async function loadSent(){
   try {
-    const c = store.get('sentc', null); let list = c && Date.now() - c.t < 6e5 ? c.list : null;
+    const c = store.get('sentc', null); let list = c && c.v === '@V@' && Date.now() - c.t < 6e5 ? c.list : null;
     if (!list){
       const r = await fetch(`https://api.github.com/repos/${IDX.repo}/issues?labels=naming&state=open&per_page=100`, {headers: {Accept: 'application/vnd.github+json'}}).catch(() => null);
-      if (r && r.ok){ list = (await r.json()).map(x => ({number: x.number, body: x.body})); store.set('sentc', {t: Date.now(), list}); }
+      if (r && r.ok){ list = (await r.json()).map(x => ({number: x.number, body: x.body})); store.set('sentc', {t: Date.now(), v: '@V@', list}); }
       else list = c ? c.list : [];
     }
     for (const is of list){

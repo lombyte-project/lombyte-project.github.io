@@ -2,12 +2,13 @@
 """Build the GitHub Pages site into build/site.
 
 Run from a checkout of the game repository's main branch: the logo comes from
-assets/, the commits bar from its git log, the numbers from report.json on its
-`progress` branch. The page sources live next to this script.
+assets/, the commits bar from its git log, the numbers and the map from report.json
+and decomp_map.svg on its `progress` branch. The page sources live next to this script.
 
 usage: build_site.py PROGRESS_DIR [SITE_URL]
 """
 import datetime
+import hashlib
 import html
 import json
 import pathlib
@@ -68,11 +69,25 @@ square.paste(logo, ((side - logo.width) // 2, (side - logo.height) // 2))
 apple = Image.new("RGB", (180, 180), "#000")
 apple.paste(square.resize((150, 150), Image.LANCZOS), (15, 15), square.resize((150, 150), Image.LANCZOS))
 apple.save(out / "apple-touch-icon.png", optimize=True)
-for name in ("index.html", "robots.txt", "sitemap.xml"):
+shutil.copy(progress / "decomp_map.svg", out)
+naming_api.build(out)  # namingdesk.json, for AI tools
+
+
+def version():
+    """Hash of the data the pages fetch. Their URLs carry it (?v=), so each deploy with new data
+    gets new URLs and a reload never mixes a fresh page with old data from a cache."""
+    h = hashlib.sha256()
+    for f in sorted([out / "decomp_map.svg", *(out / "naming-data").rglob("*")]):
+        if f.is_file():
+            h.update(f.relative_to(out).as_posix().encode() + b"\0" + f.read_bytes())
+    return h.hexdigest()[:12]
+
+
+values["@V@"] = version()
+for name in ("index.html", "namingdesk.html", "robots.txt", "sitemap.xml"):
     text = (out / name).read_text()
     for key, value in values.items():
         text = text.replace(key, value)
     (out / name).write_text(text)
-naming_api.build(out)  # namingdesk.json, for AI tools
 (out / ".nojekyll").touch()
 print(f"site built in {out}")

@@ -26,7 +26,6 @@
 <meta name="twitter:description" content="The open-source Ratchet and Clank decompilation. Lombyte turns the 2002 PS2 classic back into readable C that rebuilds the original game byte for byte, the groundwork for a future native PC port.">
 <meta property="og:locale" content="en_US">
 <link rel="preload" as="image" href="hero.jpg" fetchpriority="high">
-<link rel="preconnect" href="https://raw.githubusercontent.com">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -251,7 +250,7 @@ html.going main,html.going .hero,html.going .bar,html.going footer{transition:op
       <li class="tile"><b>@FUNCS_DONE@</b><span>of @FUNCS@ functions matched</span></li>
       <li class="tile"><b>@UNITS_DONE@</b><span>of @UNITS@ units complete</span></li>
     </ul>
-    <a class="map" href="https://raw.githubusercontent.com/lombyte-project/lombyte/progress/decomp_map.svg" aria-haspopup="dialog"><img src="https://raw.githubusercontent.com/lombyte-project/lombyte/progress/decomp_map.svg" alt="Map of Ratchet &amp; Clank decompilation progress by unit" width="800" height="1104" loading="lazy" decoding="async"></a>
+    <a class="map" href="decomp_map.svg?v=@V@" aria-haspopup="dialog"><img src="decomp_map.svg?v=@V@" alt="Map of Ratchet &amp; Clank decompilation progress by unit" width="800" height="1104" loading="lazy" decoding="async"></a>
     <p class="note">Updated automatically from the main branch on @DATE@.</p>
   </section>
 
@@ -322,18 +321,18 @@ for (const a of document.querySelectorAll("a[data-desk]")) a.addEventListener("c
   setTimeout(() => location.href = a.href, 700);
 });
 // Names the community already gave: renames in closed `naming` issues (one yaml block each), and those still open.
-// GitHub allows 60 anonymous calls an hour, so the count is kept for 10 minutes.
+// GitHub allows 60 anonymous calls an hour, so the count is kept for 10 minutes, or until the next deploy.
 (async () => {
   const el = document.getElementById("deskStat"); if (!el) return;
   let c = null; try { c = JSON.parse(localStorage.getItem("lb.names") || "null"); } catch {}
-  if (!c || Date.now() - c.t > 6e5) {
+  if (!c || c.v !== "@V@" || Date.now() - c.t > 6e5) {
     try {
       const r = await fetch("https://api.github.com/repos/lombyte-project/lombyte/issues?labels=naming&state=all&per_page=100", {headers: {Accept: "application/vnd.github+json"}});
       if (r.ok) {
         const n = b => ((b || "").match(/```yaml/g) || []).length || 1;
         let done = 0, open = 0;
         for (const i of await r.json()) { if (i.pull_request) continue; if (i.state === "open") open += n(i.body); else if (i.state_reason === "completed") done += n(i.body); }
-        c = {t: Date.now(), done, open}; try { localStorage.setItem("lb.names", JSON.stringify(c)); } catch {}
+        c = {t: Date.now(), v: "@V@", done, open}; try { localStorage.setItem("lb.names", JSON.stringify(c)); } catch {}
       }
     } catch {}
   }
