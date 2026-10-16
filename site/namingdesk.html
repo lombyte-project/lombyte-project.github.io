@@ -1250,12 +1250,11 @@ function openTry(o){
   $('dclose').focus();
 }
 function closeHelp(){ const d = $('drawer'); d.classList.remove('in'); setTimeout(() => { if (!d.classList.contains('in')) d.hidden = true; }, 220); }
+/* Sizes only: where a name is defined, the card has already opened in the code. */
 function facts(e){
-  const out = [], loc = (p, l) => `<code>${esc(p)}${l ? ':' + l : ''}</code>`;
-  if (e.kind === 'type'){ const s = IDX.structs[e.key || e.word]; if (s){ if (s.z != null) out.push(`size ${hex(s.z, 1)} bytes`); out.push('defined in ' + loc(s.p, s.l)); } }
-  if (e.kind === 'field'){ const s = IDX.structs[e.cands[e.pick][0]]; if (s.z != null) out.push(`struct size ${hex(s.z, 1)}`); out.push('declared in ' + loc(s.p, e.cands[e.pick][2])); }
-  if (e.kind === 'function' || e.kind === 'global'){ if (IDX.defs[e.word]) out.push('defined in ' + loc(...IDX.defs[e.word])); if (IDX.alias[e.word]) out.push(`linked as <code>${esc(IDX.alias[e.word])}</code>`); }
-  if (e.kind === 'macro' && IDX.macros[e.word]) out.push('defined in ' + loc(...IDX.macros[e.word]));
+  const out = [];
+  if (e.kind === 'type'){ const s = IDX.structs[e.key || e.word]; if (s && s.z != null) out.push(`size ${hex(s.z, 1)} bytes`); }
+  if (e.kind === 'field'){ const s = IDX.structs[e.cands[e.pick][0]]; if (s.z != null) out.push(`struct size ${hex(s.z, 1)} bytes`); }
   return out.length ? `<div class="facts">${out.map(x => `<span>${x}</span>`).join('')}</div>` : '';
 }
 /* What the data is and whether the report counts it. Bytes are never shown: they come from the game disc. */
@@ -1264,9 +1263,9 @@ function dataBlock(e, mv){
   const st = isBss(d) ? ['', 'Zeroed at start (bss), not counted'] : d[1] ? ['ok', 'In C, counted as data'] : ['no', 'In assembly, not counted yet'];
   const nm = f => `<code title="${esc(f)}">${esc(f.split('/').pop())}</code>`;
   const also = d[4] === 1 && !d[1] && Array.isArray(d[5]) ? d[5].filter(x => typeof x === 'string') : null, more = also && d[5].find(x => typeof x === 'number');
-  const rd = d[5] === 'lit' && !d[1] ? `A float constant${d[4] === 1 ? ` read by ${nm(d[3][0])}` : ''}: the compiler makes it from a number in the C code, so it is not moved by hand` : !d[4] ? 'No C file reads it yet' : d[4] === 1 && d[5] === 'none' && !d[1] ? `Only ${nm(d[3][0])} names it, but the code reaches it through a pointer: keep it in assembly` : also ? `Only ${nm(d[3][0])} names it, but code in ${also.slice(0, 2).map(f => f.startsWith('src/') ? nm(f) : 'level code').join(', ')}${(more || also.length) > 2 ? ` and ${(more || also.length) - 2} more` : ''} reads it too: keep it in assembly` : d[4] === 1 ? `Read only by ${nm(d[3][0])}` : `Read by ${plural(d[4], 'file', 'files')}: ${d[3].slice(0, 2).map(nm).join(', ')}${d[4] > 2 ? ` and ${d[4] - 2} more` : ''}`;
+  const rd = d[5] === 'lit' && !d[1] ? `A float constant${d[4] === 1 ? ` read by ${nm(d[3][0])}` : ''}: the compiler makes it from a number in the C code, so it is not moved by hand` : !d[4] ? 'No C file reads it yet' : d[4] === 1 && d[5] === 'none' && !d[1] ? `Only ${nm(d[3][0])} names it, but the code reaches it through a pointer: keep it in assembly` : also ? `Only ${nm(d[3][0])} names it, but code in ${also.slice(0, 2).map(f => f.startsWith('src/') ? nm(f) : 'level code').join(', ')}${(more || also.length) > 2 ? ` and ${(more || also.length) - 2} more` : ''} reads it too: keep it in assembly` : d[4] === 1 ? `Read only by ${nm(d[3][0])}` : '';
   const box = movable(d) ? `<label class="mv"><input type="checkbox" id="mv"${mv ? ' checked' : ''}>Move it into this file. A new name is optional.</label>` : '';
-  return `<div class="data"><div class="drow"><span class="st ${st[0]}">${st[1]}</span><span>${regionName(d[0])}</span>${d[2] ? `<span>${d[2].toLocaleString('en')} bytes</span>` : ''}</div><div class="drow"><span>${rd}</span>${box}</div></div>`;
+  return `<div class="data"><div class="drow"><span class="st ${st[0]}">${st[1]}</span><span>${regionName(d[0])}</span>${d[2] ? `<span>${d[2].toLocaleString('en')} bytes</span>` : ''}</div>${rd || box ? `<div class="drow"><span>${rd}</span>${box}</div>` : ''}</div>`;
 }
 function usesBlock(e){
   if (!uses) return '<div class="uload" role="status"><span class="spin" aria-hidden="true"></span>Finding every place that uses it…<i aria-hidden="true"></i></div>';
@@ -1276,7 +1275,14 @@ function usesBlock(e){
   const note = likely ? `${e.cands.length} structs have a field called ${esc(e.word)}; this counts files that use ${esc(SN(e.cands[e.pick][0]))}` : 'all of them change with the new name';
   return `<details class="more-facts" id="udet"${UOPEN ? ' open' : ''}><summary>${what}<span class="faint unote">${note}</span></summary><ul class="ulist">${uses.list.slice(0, 400).map(x => `<li><button type="button" data-go="${esc(x[0])}" data-ln="${x[1]}"><b>${esc(x[0])}:${x[1]}</b>  ${esc(x[2])}</button></li>`).join('')}</ul></details>`;
 }
-let UOPEN = false, DOPEN = false;
+let UOPEN = false, ROPEN = false;
+/* The C files that read a global, from the same search as Used in: one row per file, opening its first use. */
+function readersBlock(e){
+  const d = e.kind === 'global' && dataOf(e.word); if (!d || d[4] < 2 || !uses) return '';
+  const files = new Map(); for (const x of uses.list) if (x[0].endsWith('.c')){ const f = files.get(x[0]); if (f) f[1]++; else files.set(x[0], [x[1], 1]); }
+  if (!files.size) return '';
+  return `<details class="more-facts" id="rdet"${ROPEN ? ' open' : ''}><summary>Read by ${plural(files.size, 'C file', 'C files')}${d[1] ? '' : '<span class="faint unote">it stays in assembly until only one file reads it</span>'}</summary><ul class="ulist">${[...files].map(([p, [ln, n]]) => `<li><button type="button" data-go="${esc(p)}" data-ln="${ln}"><b>${esc(p)}</b>  ${plural(n, 'use', 'uses')}</button></li>`).join('')}</ul></details>`;
+}
 /* Callers, address takers and callees from the game programs themselves, so calls from code still in
    assembly and pointers to the function count too. Calls made through a pointer the game computes
    while it runs are not visible here; the places that take the address are. */
@@ -1463,7 +1469,7 @@ function renderCard(){
   else {
     const path = e.kind === 'file' || e.kind === 'folder';
     const pick = e.kind === 'field' && e.cands.length > 1 ? `<label class="full" for="st">Which struct? ${e.cands.length} have a field called ${esc(e.word)}<select id="st">${e.cands.map((x,i) => `<option value="${i}"${i===e.pick?' selected':''}>${esc(SN(x[0]))}${x[0].includes('@') ? ' — ' + esc(x[0].split('@')[1].split('/').pop()) : ''}${x[1]!=null?'  (+'+hex(x[1],1)+')':''}</option>`).join('')}</select></label>` : '';
-    const wb = whereBlock(e), more = (e.kind === 'function' ? '' : facts(e)) + dataBlock(e, keep.mv), calls = callsBlock(e), usedIn = usesBlock(e);
+    const wb = whereBlock(e), more = facts(e) + dataBlock(e, keep.mv), calls = callsBlock(e), usedIn = usesBlock(e);
     body = `${sentBlock(e)}<ol class="flow">${wb ? `<li><h3>Check it in the game</h3>${callHint(e)}${wb}</li>` : ''}
       <li><h3>Name it</h3>${ideaBlock(e)}
       <div class="form">${pick}
@@ -1472,9 +1478,11 @@ function renderCard(){
         <div class="bad full" id="bad" role="status"></div>
       </div><span class="faint saved" id="saved"${DRAFTS[elKey(e)] ? '' : ' hidden'}>✓ Saved in this browser, so you can come back to it later.</span></li>
       <li><h3>Send it</h3><div class="send-row"><a class="send" id="send" target="_blank" rel="noopener">Suggest it on GitHub ↗</a><button class="ghost addb" id="addb" type="button">+ Add to draft issue</button></div><p class="faint sendnote">One name: suggest it now, GitHub opens a filled-in issue and you press Submit. Several names: add each to the draft issue and send them together.</p></li></ol>
+      ${more}
       ${calls ? `<details class="more-facts" id="xdet"${XOPEN ? ' open' : ''}><summary>${XR && xrefOf(e.word) && !xrefOf(e.word).c.length ? 'Reached through a pointer' : 'Called from' + (XR && xrefOf(e.word) ? ' (' + new Set(xrefOf(e.word).c.map(r => r[0])).size + ')' : '')}</summary>${calls}</details>` : ''}
+      ${readersBlock(e)}
       ${usedIn}
-      ${more ? `<details class="more-facts" id="ddet"${DOPEN ? ' open' : ''}><summary>Details: ${e.kind === 'global' && dataOf(e.word) ? 'data, ' : ''}where it is defined</summary>${more}</details>` : ''}`;
+      `;
   }
   /* the same card drawn again (facts arrived, a list changed): keep where the reader had scrolled */
   const sameK = c.dataset.k === elKey(e), keepTop = sameK && c.querySelector('.cbody') ? c.querySelector('.cbody').scrollTop : 0, keepXl = sameK && c.querySelector('.xl') ? c.querySelector('.xl').scrollTop : 0;
@@ -1508,8 +1516,8 @@ function renderCard(){
   if ($('xback')) $('xback').onclick = () => goFn(NAV.pop(), true);
   if ($('xdet')) $('xdet').ontoggle = () => { XOPEN = $('xdet').open; };
   if ($('seecalls')) $('seecalls').onclick = () => { XOPEN = true; renderCard(); $('xdet').scrollIntoView({block: 'start', behavior: 'smooth'}); };
+  if ($('rdet')) $('rdet').ontoggle = () => { ROPEN = $('rdet').open; };
   if ($('udet')) $('udet').ontoggle = () => { UOPEN = $('udet').open; };
-  if ($('ddet')) $('ddet').ontoggle = () => { DOPEN = $('ddet').open; };
   if ($('xall')) $('xall').onclick = () => { XALL = true; renderCard(); };
   c.querySelectorAll('[data-xcopy]').forEach(b => b.onclick = () => { XCOPY = +b.dataset.xcopy; XALL = false; renderCard(); });
   c.querySelectorAll('[data-fn]').forEach(b => b.onclick = () => goFn(b.dataset.fn));
