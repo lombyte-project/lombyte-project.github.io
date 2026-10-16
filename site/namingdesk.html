@@ -416,7 +416,12 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const KW = new Set('if else for while do return switch case break continue default goto sizeof static extern const volatile struct union typedef enum inline register'.split(' '));
 const TY = new Set('void int char short long float double unsigned signed u8 u16 u32 u64 s8 s16 s32 s64 f32 f64 b32 vs8 vu8 vs16 vu16 vs32 vu32 vs64 vu64'.split(' '));
-const COMPILER = new Set('__asm__ asm __attribute__ attribute section aligned alias packed unused noreturn __volatile__ __inline__ defined include define ifdef ifndef endif elif undef pragma NULL TRUE FALSE'.split(' '));
+/* Build switches people meet in the code, said in plain words. */
+const INFRA_NOTE = {
+  NON_MATCHING: 'NON_MATCHING marks a draft: C that works but does not compile to exactly the original yet. The build still uses the original assembly, so the draft can be read and improved without breaking anything. It is part of the build, not a name from the game, so there is nothing to rename here.',
+  INCLUDE_ASM: 'INCLUDE_ASM puts the original assembly of a function into the build until someone writes it in C. It is part of the build, not a name from the game, so there is nothing to rename here.',
+};
+const COMPILER = new Set('NON_MATCHING INCLUDE_ASM __asm__ asm __attribute__ attribute section aligned alias packed unused noreturn __volatile__ __inline__ defined include define ifdef ifndef endif elif undef pragma NULL TRUE FALSE'.split(' '));
 const COLOR = {exact:'var(--exact)', draft:'var(--draft)', asm:'var(--asm)'};
 const WHAT = {field:'Field', type:'Struct', function:'Function', global:'Global', local:'Local name', macro:'Macro', name:'Name', file:'File', folder:'Folder'};
 const FILEOF = {};
@@ -658,7 +663,17 @@ function renderCode(line){
   const isC = /\.(c|h)$/.test(cur), L = fileT.t.replace(/\n$/, '').split('\n');
   const stripe = new Array(L.length).fill('transparent');
   (fileT.f || []).forEach(fn => { for (let i = fn.s; i <= fn.e && i <= L.length; i++) stripe[i-1] = COLOR[fn.k]; });
-  $('code').innerHTML = L.map((l, i) => `<div class="row" id="L${i+1}"><span style="background:${stripe[i]}"></span><span class="ln">${i+1}</span><span class="src">${hl(l, isC, null) || ' '}</span></div>`).join('');
+  /* text inside a multi-line comment is shown, never clickable: it holds no names to rename */
+  let inCom = false;
+  const draw = l => {
+    if (!isC) return hl(l, isC, null);
+    let pre = '';
+    if (inCom){ const e = l.indexOf('*/'); if (e < 0) return '<span class="c">' + esc(l) + '</span>'; pre = '<span class="c">' + esc(l.slice(0, e + 2)) + '</span>'; l = l.slice(e + 2); inCom = false; }
+    const t = l.replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/g, '""').replace(/\/\*.*?\*\//g, ''), o = t.indexOf('/*'), sl = t.indexOf('//');
+    if (o >= 0 && (sl < 0 || o < sl)) inCom = true;
+    return pre + hl(l, isC, null);
+  };
+  $('code').innerHTML = L.map((l, i) => `<div class="row" id="L${i+1}"><span style="background:${stripe[i]}"></span><span class="ln">${i+1}</span><span class="src">${draw(l) || ' '}</span></div>`).join('');
   WORDS = null; markWord(); jumpTo(line);
 }
 function jumpTo(line){
@@ -1486,7 +1501,7 @@ function renderCard(){
   const keep = draft(), saved = !e.infra && DRAFTS[elKey(e)] || {}; c.hidden = false;
   if (!keep.nn && !keep.why){ keep.nn = saved.nn || ''; keep.why = saved.why || ''; keep.mv = saved.mv ?? MOVE; }  /* picked from Ready to move: the move is already ticked */
   let body;
-  if (e.infra) body = `<div class="small">This is part of the build setup or the compiler, not a name from the game, so there is nothing to rename here.</div>`;
+  if (e.infra) body = `<div class="small">${INFRA_NOTE[e.word] || 'This is part of the build setup or the compiler, not a name from the game, so there is nothing to rename here.'}</div>`;
   else {
     const path = e.kind === 'file' || e.kind === 'folder';
     const pick = e.kind === 'field' && e.cands.length > 1 ? `<label class="full" for="st">Which struct? ${e.cands.length} have a field called ${esc(e.word)}<select id="st">${e.cands.map((x,i) => `<option value="${i}"${i===e.pick?' selected':''}>${esc(SN(x[0]))}${x[0].includes('@') ? ' — ' + esc(x[0].split('@')[1].split('/').pop()) : ''}${x[1]!=null?'  (+'+hex(x[1],1)+')':''}</option>`).join('')}</select></label>` : '';
