@@ -1461,7 +1461,7 @@ function renderCard(){
   else {
     const path = e.kind === 'file' || e.kind === 'folder';
     const pick = e.kind === 'field' && e.cands.length > 1 ? `<label class="full" for="st">Which struct? ${e.cands.length} have a field called ${esc(e.word)}<select id="st">${e.cands.map((x,i) => `<option value="${i}"${i===e.pick?' selected':''}>${esc(SN(x[0]))}${x[0].includes('@') ? ' — ' + esc(x[0].split('@')[1].split('/').pop()) : ''}${x[1]!=null?'  (+'+hex(x[1],1)+')':''}</option>`).join('')}</select></label>` : '';
-    const wb = whereBlock(e), more = facts(e) + dataBlock(e, keep.mv), calls = callsBlock(e), usedIn = usesBlock(e);
+    const wb = whereBlock(e), more = (e.kind === 'function' ? '' : facts(e)) + dataBlock(e, keep.mv), calls = callsBlock(e), usedIn = usesBlock(e);
     body = `${sentBlock(e)}<ol class="flow">${wb ? `<li><h3>Check it in the game</h3>${callHint(e)}${wb}</li>` : ''}
       <li><h3>Name it</h3>${ideaBlock(e)}
       <div class="form">${pick}
