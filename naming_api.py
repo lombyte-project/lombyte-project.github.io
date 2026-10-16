@@ -61,6 +61,7 @@ RECIPES = {
     "check_build_levels": ["`make elf` and `make overlays` must end with PASS: the output stays byte-identical."],
     "investigate": ["No name yet: check in PCSX2 what the cheat changes, then suggest a name on the Naming Desk."],
 }
+RAW_TYPES = {"u8", "s8", "unsigned char", "signed char", "u128", "s128"}
 GUIDE = [
     "Read the game repo's docs/code-cleanup.md first; its rules win over this file.",
     "This file is a snapshot of the commit in `source.commit`. Check each task on the latest main with "
@@ -70,6 +71,9 @@ GUIDE = [
     "`ready_to_move`: move the data into its only reader (`move_to`); a move keeps the name unless "
     "the task also gives a new one.",
     "Do each task's `recipe` steps in order (see `recipes`). If the build does not end with PASS, undo that task.",
+    "Use the game's tools as they are. When `data-refs.py --emit` stops (no declaration, no complete size, "
+    "a type it cannot write), skip that task: never give an array a size yourself and never write code or raw "
+    "bytes as a C array.",
     "One commit per task, title `decomp: rename <old> to <new>` or `decomp: move <old> into <file>`.",
 ]
 
@@ -163,9 +167,12 @@ def build(site_dir):
 
     data = q.get("data", {})
 
-    def movable(d):
+    def movable(d, w):
         if not d or d[1] or "bss" in d[0] or d[4] != 1 or len(d) < 6 or d[5] != "ok":
             return False
+        g = idx["gtype"].get(w) or idx["gtype"].get(alias.get(w))
+        if g and re.sub(r"\s+", " ", g[0]).strip() in RAW_TYPES:
+            return False  # raw bytes and quadwords stay in assembly (code-cleanup.md); --emit cannot write u128
         m = re.match(r"^level (\d\d)", d[0])
         return d[3][0].startswith(f"src/overlays/l{m.group(1)}/") if m else not d[3][0].startswith("src/overlays/")
 
@@ -188,7 +195,7 @@ def build(site_dir):
         cheats = kind == "g" and (q["cheat"].get(w) or q["cheat"].get(alias.get(w)))
         if cheats:
             ev.append(("cheat_clue", "; ".join(c[0] + (f" (+{c[1]:X})" if c[1] else "") for c in cheats[:6])))
-        mv = kind == "g" and movable(d)
+        mv = kind == "g" and movable(d, w)
         if mv:
             ev.append(("one_reader", f"Only {d[3][0]} reads it."))
         if not ev:
