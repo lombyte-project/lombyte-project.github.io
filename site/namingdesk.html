@@ -591,7 +591,8 @@ async function jumpToName(n){
 }
 
 function ids(s, word){ let out = '', last = 0, m; const re = /[A-Za-z_]\w*/g; while ((m = re.exec(s))){ out += esc(s.slice(last, m.index)) + span(m[0], word); last = re.lastIndex; } return out + esc(s.slice(last)); }
-const span = (w, word, extra = '') => `<span class="id${extra}${w===word?' on':''}">${w}</span>`;
+/* C keywords and built-in types are part of the language, not names: shown, never clickable. */
+const span = (w, word, extra = '') => KW.has(w) || TY.has(w) ? `<span class="${TY.has(w) ? 't' : 'k'}">${w}</span>` : `<span class="id${extra}${w===word?' on':''}">${w}</span>`;
 function hl(line, isC, word){
   const inc = /^(\s*#\s*include\s*)(["<])([^">]+)([">])(.*)$/.exec(line);
   if (inc) return `<span class="pp">${esc(inc[1] + inc[2])}<span class="inc" data-inc="${esc(inc[3])}">${esc(inc[3])}</span>${esc(inc[4] + inc[5])}</span>`;
@@ -666,6 +667,7 @@ function fieldIndex(){ if (!FIELDS){ FIELDS = new Map(); for (const [n, s] of Ob
 function structsWithField(w){ return (fieldIndex().get(w) || []).map(c => [...c]); }
 function enclosing(ln){ return (fileT && fileT.f || []).find(f => ln >= f.s && ln <= f.e); }
 function classify(w, before, ln){
+  if (KW.has(w) || TY.has(w)) return;
   if (COMPILER.has(w) || IDX.infra.has(w)) return select({kind:'macro', word:w, infra:true});
   const hit = (fieldIndex().get(w) || []).find(c => IDX.structs[c[0]].p === cur && c[2] === ln), inStruct = hit ? [hit[0]] : null;
   if (/(->|\.)\s*$/.test(before) || inStruct){
