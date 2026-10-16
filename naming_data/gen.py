@@ -100,6 +100,7 @@ class Tree:
         self.files = []  # (path, text or None, reason)
         self.lay = Layouts()
         self.alias, self.defs, self.macros = {}, {}, {}
+        self.alias_files = collections.defaultdict(set)  # C name -> files that declare it for a symbol
         self.fnames, self.afn, self.infra, self.typedef_names = set(), set(), set(), set()
         self.gtype, self.decl_line, self.fn_meta = {}, {}, {}
         self.words = collections.Counter()  # word -> occurrences over the tree
@@ -183,7 +184,7 @@ class Tree:
                 continue
             target = (asm if i == 0 else None) or (alias_to if i == 0 else None)
             if target and target != d.name:
-                self.alias.setdefault(d.name, target)
+                self.note_alias(d.name, target, path)
             ln = self.at(text, line, d.name)
             if d.func:
                 (self.afn if target else self.fnames).add(d.name)
@@ -191,6 +192,25 @@ class Tree:
                     self.infra.add(d.name)
                 continue
             self.var(d, words, path, ln)
+
+    def note_alias(self, name, target, path):
+        self.alias.setdefault(name, target)
+        if self.alias[name] == target:
+            self.alias_files[name].add(path)
+
+    def real_names(self):
+        """The name each placeholder symbol goes by: a plain name (not a per-file variant like
+        frame_time_2080b0 or strlen_alt), the one a header declares, else the one most files use."""
+        variant = re.compile(r"_(gp|lui|macro|const|alt|c\d+|[a-z]|[0-9a-f]{4,})$", re.I)
+        best = {}
+        for c, t in self.alias.items():
+            if UNNAMED.match(c) or c in KEYWORDS:
+                continue
+            fs = self.alias_files.get(c, ())
+            key = (bool(variant.search(c)), not any(f.startswith("include/") for f in fs), -len(fs), len(c), c)
+            if t not in best or key < best[t][0]:
+                best[t] = (key, c)
+        return {t: c for t, (_k, c) in sorted(best.items())}
 
     def var(self, d, words, path, line):
         if d.base.startswith("__typeof__"):
@@ -229,14 +249,14 @@ class Tree:
                             self.name_record(d.name, key, path)
                     else:
                         if asm and i == 0:
-                            self.alias.setdefault(d.name, asm)
+                            self.note_alias(d.name, asm, path)
                         self.var(d, set(words), path, st["end"])
             return None
         if "=" in hs:
             words, decls, asm, attrs = parse_decl(hs.split("=")[0])
             if decls and not decls[0].func:
                 if asm:
-                    self.alias.setdefault(decls[0].name, asm)
+                    self.note_alias(decls[0].name, asm, path)
                 self.var(decls[0], words, path, self.at(head, st["line"], decls[0].name))
             return None
         words, decls, asm, attrs = parse_decl(hs)
@@ -248,7 +268,7 @@ class Tree:
         self.fnames.add(d.name)
         self.defs.setdefault(d.name, [path, line])
         if asm and asm != d.name:
-            self.alias.setdefault(d.name, asm)
+            self.note_alias(d.name, asm, path)
         if infra:
             self.infra.add(d.name)
         return {"n": d.name, "s": line, "e": st["end"]}
@@ -504,7 +524,7 @@ def main():
         "fnames": sorted(tree.fnames), "afn": sorted(tree.afn),
         "macros": tree.macros, "infra": sorted(tree.infra), "gtype": gtype, "structs": structs,
         "typedefs": sorted(tree.typedef_names - set(structs)),
-        "defs": tree.defs, "addr": addr, "alias": tree.alias, "levels": levels, "fmap": fmap,
+        "defs": tree.defs, "addr": addr, "alias": tree.alias, "rname": tree.real_names(), "levels": levels, "fmap": fmap,
     }
 
     queue = build_queue(game, tree, index, named)

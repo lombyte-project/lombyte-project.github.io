@@ -1476,9 +1476,8 @@ function sentBlock(e){
 let RNAME = null;
 function realName(w){
   if (!RNAME){
-    RNAME = {};  /* prefer the plain name over per-file variants like frame_time_2080b0 or frame_time_gp */
-    const rank = k => (/_(gp|lui|macro|const|[a-z]|[0-9a-f]{4,})$/i.test(k) ? 1000 : 0) + k.length;
-    for (const [k, v] of Object.entries(IDX.alias)) if (!KW.has(k) && !TY.has(k) && !/^(fun|func|d|sub)_(l\d\d_)?[0-9a-f]/i.test(k)){ const o = RNAME[v.toLowerCase()]; if (!o || rank(k) < rank(o)) RNAME[v.toLowerCase()] = k; }
+    RNAME = {};  /* the generator picks the name a header declares, else the one most files use */
+    for (const [k, v] of Object.entries(IDX.rname || {})) RNAME[k.toLowerCase()] = v;
   }
   return /^(fun|func|d|sub)_/i.test(w) ? RNAME[w.toLowerCase()] : null;
 }
