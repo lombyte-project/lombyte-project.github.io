@@ -645,7 +645,7 @@ function hl(line, isC, word){
   if (inc) return `<span class="pp">${esc(inc[1] + inc[2])}<span class="inc" data-inc="${esc(inc[3])}">${esc(inc[3])}</span>${esc(inc[4] + inc[5])}</span>`;
   if (!isC) return ids(line, word);
   if (/^\s*#/.test(line)) return '<span class="pp">' + ids(line, word) + '</span>';
-  const re = /(\/\*.*?\*\/|\/\*.*$|^\s*\*.*$|\/\/.*$)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|\b(0x[0-9A-Fa-f]+|\d+(?:\.\d+)?f?)\b|([A-Za-z_]\w*)/g;
+  const re = /(\/\*.*?\*\/|\/\*.*$|\/\/.*$)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|\b(0x[0-9A-Fa-f]+|\d+(?:\.\d+)?f?)\b|([A-Za-z_]\w*)/g;
   let out = '', last = 0, m;
   while ((m = re.exec(line))){
     out += esc(line.slice(last, m.index)); last = re.lastIndex;
