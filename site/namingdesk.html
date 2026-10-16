@@ -231,15 +231,37 @@ textarea{font-family:var(--mono);font-size:13px;line-height:20px;color:var(--fg)
 .bk{all:unset;cursor:pointer;margin-left:auto;display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:8px;border:1px solid var(--line);font-size:13px;color:var(--soft)}
 .bk:hover{color:var(--fg);border-color:var(--soft)}
 .bk b{min-width:20px;height:20px;padding:0 6px;border-radius:10px;display:inline-grid;place-items:center;background:var(--raise);color:var(--dim);font-size:12px}
+.bk:not(.has){display:none}
+.menu{position:relative;display:flex}
+.menu>summary.btn{display:block}
+.menu summary{list-style:none}
+.menu summary::-webkit-details-marker{display:none}
+.mlist{position:absolute;right:0;top:calc(100% + 4px);z-index:5;display:flex;flex-direction:column;gap:4px;padding:4px;background:var(--raise);border:1px solid var(--line);border-radius:8px;box-shadow:0 12px 30px rgba(0,0,0,.5)}
+.mlist .btn{white-space:nowrap}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:16px;counter-reset:st}
+.steps>li{display:flex;flex-direction:column;gap:10px;counter-increment:st}
+.steps h3{margin:0;font-size:14px;color:var(--fg);display:flex;align-items:center;gap:8px}
+.steps h3::before{content:counter(st);display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--orange-bg);color:var(--orange);font-size:12px}
+.more-facts{display:flex;flex-direction:column;gap:10px;font-size:13px;color:var(--dim)}
+.more-facts>summary{cursor:pointer;color:var(--dim)}
+.more-facts[open]>summary{margin-bottom:10px}
+.linkish2{all:unset;cursor:pointer;font-size:13px;color:var(--soft);text-decoration:underline dotted;text-underline-offset:3px}
+.linkish2:hover{color:var(--orange)}
 .bk.has b{background:var(--orange);color:var(--on-orange)}
 .bk:focus-visible{outline:2px solid var(--orange)}
 .tabs{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:3px;background:var(--bg);border:1px solid var(--line);border-radius:8px}
 .tabs::before{content:"";position:absolute;top:3px;bottom:3px;left:3px;width:calc(50% - 5px);border-radius:6px;background:var(--raise);transition:transform .3s cubic-bezier(.16,1,.3,1)}
-.tabs.q::before{transform:translateX(calc(100% + 4px))}
+.tabs:not(.q)::before{transform:translateX(calc(100% + 4px))}
+#tabQueue{order:-1}
+#tabQueue,#tabFiles{z-index:1}
 .tab{all:unset;position:relative;cursor:pointer;text-align:center;font-size:13px;line-height:20px;padding:5px 8px;border-radius:6px;color:var(--dim);font-weight:600;transition:color .2s}
 .tab[aria-selected="true"]{color:var(--fg)}
 .tab:focus-visible{outline:2px solid var(--orange)}
-.qf{display:flex;flex-wrap:wrap;gap:6px}
+.qf{display:flex;gap:8px;align-items:center}
+.seg{display:flex;gap:4px;flex:1}
+.seg .chip{flex:1;text-align:center;white-space:nowrap}
+#qk{font:inherit;font-size:12px;height:26px;padding:0 6px;border-radius:13px;border:1px solid var(--line);background:var(--bg);color:var(--soft)}
+#qk:focus-visible{outline:2px solid var(--orange)}
 .chip{all:unset;cursor:pointer;font-size:12px;line-height:18px;padding:3px 10px;border-radius:12px;border:1px solid var(--line);color:var(--soft)}
 .chip[aria-pressed="true"]{border-color:var(--orange);color:var(--orange);background:var(--orange-bg)}
 .chip:disabled{opacity:.35;cursor:not-allowed}
@@ -319,20 +341,19 @@ html.leave .wrap{transition:opacity .35s ease,transform .35s ease,filter .35s ea
 
 <div class="wrap">
   <header>
-    <div class="title"><h1><a class="home" id="home" href="./" title="Back to the Lombyte homepage"><img src="logo-256.png" alt="" width="30" height="30">Lombyte <span>Naming Desk</span></a></h1><span class="preview">preview · <code class="mono" id="commit">…</code> · <a class="bug" id="bug" href="#" target="_blank" rel="noopener">Report a bug</a> · <a class="bug" href="namingdesk.json" title="The To name lists as JSON, for AI tools">For AI</a></span><button class="bk" id="basketBtn" type="button" aria-controls="drawer">Draft issue <b id="bcount">0</b></button></div>
-    <p class="lead">Know what something in the game code really does? Click its name, type a better one and send it as a GitHub issue. Any file, function, struct, field or global in <code>src/</code> or <code>include/</code> can be renamed.</p>
+    <div class="title"><h1><a class="home" id="home" href="./" title="Back to the Lombyte homepage"><img src="logo-256.png" alt="" width="30" height="30">Lombyte <span>Naming Desk</span></a></h1><span class="preview">preview<code class="mono" id="commit" hidden>…</code> · <a class="bug" id="bug" href="#" target="_blank" rel="noopener">Report a bug</a> · <a class="bug" href="namingdesk.json" title="The To name lists as JSON, for AI tools">For AI</a></span><button class="bk" id="basketBtn" type="button" aria-controls="drawer">Draft issue <b id="bcount">0</b></button></div>
   </header>
   <div class="grid">
     <nav class="side" aria-label="Files and names">
-      <div class="tabs" role="tablist" aria-label="Browse by"><button class="tab" role="tab" id="tabFiles" type="button" aria-selected="true">Files</button><button class="tab" role="tab" id="tabQueue" type="button" aria-selected="false">To name</button></div>
-      <div class="qf" id="qf" hidden><button type="button" class="chip" data-k="" aria-pressed="true">All</button><button type="button" class="chip" data-k="f" aria-pressed="false">Functions</button><button type="button" class="chip" data-k="g" aria-pressed="false">Data</button><button type="button" class="chip" data-k="d" aria-pressed="false">Fields</button><button type="button" class="chip" id="ideaOnly" aria-pressed="false" title="Functions with a name idea from the repo, and data that public cheat codes write">Has an idea</button><button type="button" class="chip" id="moveOnly" aria-pressed="false" title="Data only one file reads: moving it into that file makes it count as data in C. Biggest first.">Ready to move</button></div>
+      <div class="tabs" role="tablist" aria-label="Browse by"><button class="tab" role="tab" id="tabFiles" type="button" aria-selected="false">Browse code</button><button class="tab" role="tab" id="tabQueue" type="button" aria-selected="true">To name</button></div>
+      <div class="qf" id="qf" hidden><div class="seg" role="group" aria-label="Show"><button type="button" class="chip" id="ideaOnly" aria-pressed="true" title="Names with a clue: a name idea from the repo or a cheat code. The easiest place to start.">Has a clue</button><button type="button" class="chip" id="allNames" aria-pressed="false" title="Every name still to find, most used first">All names</button></div><select id="qk" aria-label="Kind"><option value="">Any kind</option><option value="f">Functions</option><option value="g">Data</option><option value="d">Fields</option></select></div>
       <input class="search" id="q" type="search" placeholder="Search a file or a name…" autocomplete="off" spellcheck="false" aria-label="Search a file or a name">
       <div class="list" id="list"></div>
       <div class="key" id="key"><span><i class="dot" style="background:var(--exact)"></i>matches the game</span><span><i class="dot" style="background:var(--draft)"></i>C draft</span><span><i class="dot" style="background:var(--asm)"></i>still assembly</span></div>
     </nav>
     <main class="sheet">
       <div class="bar-top"><span class="crumbs" id="path">Loading…</span>
-        <span class="acts"><button class="btn" id="renfile" type="button">Rename file</button><button class="btn" id="rendir" type="button">Rename folder</button><a class="btn" id="gh" target="_blank" rel="noopener">GitHub ↗</a></span></div>
+        <span class="acts"><details class="menu"><summary class="btn">Rename ▾</summary><div class="mlist"><button class="btn" id="renfile" type="button">This file</button><button class="btn" id="rendir" type="button">This folder</button></div></details><a class="btn" id="gh" target="_blank" rel="noopener">GitHub ↗</a></span></div>
             <div class="code" id="code"></div>
       <section class="card" id="card" hidden aria-live="polite"></section>
     </main>
@@ -369,7 +390,7 @@ let IDX, QD = null, cache = {}, cur = null, el = null, uses = null, allLoaded = 
 /* Saved in this browser so a reload keeps the draft issue and half-typed names. */
 const store = {get(k, d){ try { const v = localStorage.getItem('ndesk.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v){ try { localStorage.setItem('ndesk.' + k, JSON.stringify(v)); } catch {} }};
-let FULL = false, BASKET = store.get('basket', []), DRAFTS = store.get('drafts', {}), MODE = store.get('mode', 'files'), QK = '', IDEA = false, MOVE = false;
+let FULL = false, BASKET = store.get('basket', []), DRAFTS = store.get('drafts', {}), MODE = store.get('mode', 'queue'), QK = '', IDEA = true, MOVE = false;
 const SENT = new Map();
 
 async function gunzip(u){
@@ -474,8 +495,8 @@ function renderQueue(){
   const open = all.filter(it => !SENT.has(qName(it))), done = all.filter(it => SENT.has(qName(it)));
   const rows = [...open, ...done].slice(0, 150);
   const kind = {f:'function', g:'global', d:'field'};
-  const bulk = bulkPicks(all); renderQueue.bulk = bulk;
-  $('list').innerHTML = `<div class="grp">${all.length.toLocaleString('en')} names, ${MOVE ? 'biggest first' : 'most used first'}</div>`
+  const bulk = []; renderQueue.bulk = bulk;  /* bulk drafts and Ready to move are AI work now: namingdesk.json */
+  $('list').innerHTML = `<div class="grp">${IDEA ? `${all.length.toLocaleString('en')} names with a clue. Pick one, check it in the game, send a name.` : `${all.length.toLocaleString('en')} names, most used first`}</div>`
     + (bulk.length ? `<button class="ghost sm bulk" id="bulk" type="button" title="${MOVE ? 'Each one moves into its only reader' : 'Uses the name idea shown on each one'}">Add ${bulk.length.toLocaleString('en')} to draft issue</button>` : '') + rows.map(it => {
     const n = qName(it), sent = SENT.has(n), idea = hasIdea(it), d = it[0] === 'g' && dataOf(it[1]), mv = movable(d);
     const badge = sent ? '<span class="badge sent">sent</span>' : idea ? '<span class="badge bi">idea</span>' : mv ? '<span class="badge mv">1 file</span>' : d && d[1] ? '<span class="badge ic">in C</span>' : '';
@@ -530,18 +551,13 @@ $('tabFiles').onclick = () => setMode('files');
 $('tabQueue').onclick = () => setMode('queue');
 $('qf').addEventListener('click', ev => {
   const b = ev.target.closest('.chip'); if (!b || b.disabled) return;
-  /* Fields have no ideas and only data moves: a toggle that would show nothing for the picked kind is greyed out. */
-  if (b.id === 'ideaOnly'){ IDEA = !IDEA; if (IDEA) MOVE = false; }
-  else if (b.id === 'moveOnly'){ MOVE = !MOVE; if (MOVE){ IDEA = false; QK = 'g'; } }
-  else { QK = b.dataset.k; if (QK === 'd') IDEA = false; if (QK === 'd' || QK === 'f') MOVE = false; }
-  chipState(); renderList();
+  IDEA = b.id === 'ideaOnly'; chipState(); renderList();
 });
+$('qk').onchange = () => { QK = $('qk').value; if (QK === 'd') IDEA = false; chipState(); renderList(); };
+/* Fields have no clues yet, so picking Fields shows all of them. */
 function chipState(){
-  $('qf').querySelectorAll('[data-k]').forEach(x => x.setAttribute('aria-pressed', x.dataset.k === QK));
-  $('ideaOnly').setAttribute('aria-pressed', IDEA); $('moveOnly').setAttribute('aria-pressed', MOVE);
-  $('ideaOnly').disabled = QK === 'd'; $('moveOnly').disabled = QK === 'd' || QK === 'f';
-  $('ideaOnly').title = QK === 'd' ? 'Fields have no name ideas yet' : 'Functions with a name idea from the repo, and data that public cheat codes write';
-  $('moveOnly').title = QK === 'd' || QK === 'f' ? 'Only data can move' : 'Data only one file reads: moving it into that file makes it count as data in C. Biggest first.';
+  $('ideaOnly').setAttribute('aria-pressed', IDEA); $('allNames').setAttribute('aria-pressed', !IDEA);
+  $('ideaOnly').disabled = QK === 'd'; $('qk').value = QK;
 }
 async function openGlobal(n){
   const g = QD && QD.gloc && QD.gloc[n];
@@ -636,8 +652,8 @@ $('code').addEventListener('click', e => {
 });
 function resolveInclude(p){ const dir = cur.split('/').slice(0, -1).join('/'); return [`include/${p}`, `${dir}/${p}`, `src/${p}`].find(x => IDX.byPath[x]); }
 function offsetIn(root, node){ let n = 0; const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT); while (w.nextNode()){ if (node.contains(w.currentNode)) return n; n += w.currentNode.length; } return n; }
-$('renfile').onclick = () => cur && select({kind:'file', name:cur});
-$('rendir').onclick = () => cur && select({kind:'folder', name:cur.split('/').slice(0, -1).join('/')});
+$('renfile').onclick = () => { $('renfile').closest('details').open = false; cur && select({kind:'file', name:cur}); };
+$('rendir').onclick = () => { $('rendir').closest('details').open = false; cur && select({kind:'folder', name:cur.split('/').slice(0, -1).join('/')}); };
 
 /* field name -> [[struct key, offset, line]], built once */
 let FIELDS = null;
@@ -1282,12 +1298,15 @@ function renderCard(){
   else {
     const path = e.kind === 'file' || e.kind === 'folder';
     const pick = e.kind === 'field' && e.cands.length > 1 ? `<label class="full" for="st">Which struct? ${e.cands.length} have a field called ${esc(e.word)}<select id="st">${e.cands.map((x,i) => `<option value="${i}"${i===e.pick?' selected':''}>${esc(SN(x[0]))}${x[0].includes('@') ? ' — ' + esc(x[0].split('@')[1].split('/').pop()) : ''}${x[1]!=null?'  (+'+hex(x[1],1)+')':''}</option>`).join('')}</select></label>` : '';
-    body = `${sentBlock(e)}${ideaBlock(e)}${whereBlock(e)}${facts(e)}${dataBlock(e, keep.mv)}${usesBlock(e)}
+    const wb = whereBlock(e), more = facts(e) + dataBlock(e, keep.mv) + usesBlock(e);
+    body = `${sentBlock(e)}<ol class="steps">${wb ? `<li><h3>Check it in the game</h3>${wb}</li>` : ''}
+      <li><h3>Name it</h3>${ideaBlock(e)}
       <div class="form">${pick}
         <label for="nn">${path ? 'New path' : 'Better name'}<input class="nn" id="nn" autocomplete="off" spellcheck="false" placeholder="${esc(path ? e.name : e.word)}" value="${esc(keep.nn || (path ? e.name : ''))}"></label>
         <label for="why">How do you know?<input id="why" autocomplete="off" placeholder="One line is enough, e.g. counts down before the HUD icon fades" value="${esc(keep.why)}"></label>
-      </div>
-      <div class="send-row"><a class="send" id="send" target="_blank" rel="noopener">Suggest it on GitHub ↗</a><button class="ghost" id="addb" type="button">Add to draft issue</button><span class="faint">GitHub opens a filled-in issue. Sign in there and press Submit.</span><span class="bad" id="bad"></span></div>`;
+      </div></li>
+      <li><h3>Send it</h3><div class="send-row"><a class="send" id="send" target="_blank" rel="noopener">Suggest it on GitHub ↗</a><span class="faint">GitHub opens a filled-in issue: press Submit.</span><button class="linkish2" id="addb" type="button">or add it to a draft issue with more names</button><span class="bad" id="bad"></span></div></li></ol>
+      ${more ? `<details class="more-facts"><summary>Details: where it is used, data, file</summary>${more}</details>` : ''}`;
   }
   c.innerHTML = `<div class="grip" id="grip" role="separator" aria-orientation="horizontal" aria-label="Drag to resize" title="Drag to resize"></div><div class="head"><h2>${heading(e)}</h2><button class="x tog" id="tog" type="button" aria-expanded="${FULL}">${FULL ? 'Hide ▾' : 'Open ▴'}</button><button class="x" id="close" type="button">Close</button></div>${peek(e)}<div class="cwrap"><div class="cbody">${body}</div></div>`;
   c.classList.toggle('min', !FULL); c.querySelector('.cbody').inert = !FULL;
