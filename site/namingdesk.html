@@ -630,7 +630,7 @@ async function jumpToName(n){
   let at = IDX.defs[n]; const k = nameKind(n);
   if (!at && k === 'global') return openGlobal(n);
   if (at && k === 'function' && (await fnBody(n) || {}).asm){  /* only assembly so far: show the first C line that uses it */
-    const u = await findUses({kind:'function', word:n}), c = u.list.find(x => !/^\s*extern\b/.test(x[2])) || u.list[0];
+    const u = await findUses({kind:'function', word:n}), c = u.list.find(x => x[3]) || u.list[0];
     if (c) at = [c[0], c[1]];
   }
   if (at) await openFile(at[0], at[1]);
@@ -818,7 +818,8 @@ async function findUsesRaw(e){
     const L = B.t.split('\n'), enc = n => (B.f || []).find(x => n >= x.s && n <= x.e);
     let hit = false;
     /* INCLUDE_ASM names the assembly file, so that line keeps the old name until the function is in C */
-    L.forEach((l, i) => { if (re.test(l) && /^\s*INCLUDE_(ASM|RODATA)\(/.test(l)) asm++; else if (re.test(l)){ const fn = enc(i+1); list.push([f.p, i+1, l.trim().slice(0, 140), fn ? fn.n : null]); hit = true; } });
+    /* and __asm__("FUN_…") is the linker symbol a renamed declaration keeps, not a use of the old name */
+    L.forEach((l, i) => { if (re.test(l) && /^\s*INCLUDE_(ASM|RODATA)\(/.test(l)) asm++; else if (re.test(l.replace(/__asm__\s*\(\s*"[^"]*"\s*\)/g, ''))){ const fn = enc(i+1); list.push([f.p, i+1, l.trim().slice(0, 140), fn ? fn.n : null]); hit = true; } });
     if (sn && IDX.structs[sn].p === f.p){ const dl = e.cands[e.pick][2]; if (dl && !list.some(x => x[0] === f.p && x[1] === dl)){ list.push([f.p, dl, (L[dl-1] || '').trim()]); hit = true; } }
     if (hit) files++;
   }
@@ -1518,7 +1519,10 @@ function renderCard(){
   if (!keep.nn && !keep.why){ keep.nn = saved.nn || ''; keep.why = saved.why || ''; keep.mv = saved.mv ?? MOVE; }  /* picked from Ready to move: the move is already ticked */
   let body;
   if (e.infra) body = `<div class="small">${INFRA_NOTE[e.word] || 'This is part of the build setup or the compiler, not a name from the game, so there is nothing to rename here.'}</div>`;
-  else if (e.asmOnly) body = `<div class="small">Only its <code>INCLUDE_ASM</code> line names it so far, and that line names the assembly file, so there is nothing to rename in C yet. It gets a name once C code calls it.</div>` + callsBlock(e);
+  else if (e.asmOnly){
+    const rn = realName(e.word);
+    body = `<div class="small">${rn ? `The C code already calls it <code>${esc(rn)}</code> everywhere. ` : ''}Only its <code>INCLUDE_ASM</code> line keeps this name, because that line names the assembly file, so there is nothing to rename${rn ? '' : ' in C yet. It gets a name once C code calls it'}.</div>` + callsBlock(e);
+  }
   else {
     const path = e.kind === 'file' || e.kind === 'folder';
     const pick = e.kind === 'field' && e.cands.length > 1 ? `<label class="full" for="st">Which struct? ${e.cands.length} have a field called ${esc(e.word)}<select id="st">${e.cands.map((x,i) => `<option value="${i}"${i===e.pick?' selected':''}>${esc(SN(x[0]))}${x[0].includes('@') ? ' — ' + esc(x[0].split('@')[1].split('/').pop()) : ''}${x[1]!=null?'  (+'+hex(x[1],1)+')':''}</option>`).join('')}</select></label>` : '';
@@ -1621,7 +1625,7 @@ function setFull(f){
 /* The small card: the facts worth a glance, so the code stays visible until the panel is opened. */
 function peek(e){
   if (e.infra) return '<div class="peek"><span>Build setup, nothing to rename</span></div>';
-  if (e.asmOnly) return '<div class="peek"><span>Only the assembly names it, nothing to rename in C yet</span></div>';
+  if (e.asmOnly) return `<div class="peek"><span>${realName(e.word) ? 'Already named in C: ' + esc(realName(e.word)) : 'Only the assembly names it, nothing to rename in C yet'}</span></div>`;
   const out = [];
   if (e.kind === 'function' || e.kind === 'global'){ const w = where(e.word); if (w.a != null) out.push(`<code>${hex(w.a)}</code>${w.lv ? ' in level ' + w.lv : ''}`); }
   if (e.kind === 'field'){ const o = e.cands[e.pick][1]; if (o != null) out.push(`offset <code>+${hex(o, 1)}</code>`); }

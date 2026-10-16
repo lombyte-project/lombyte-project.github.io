@@ -204,15 +204,18 @@ class Tree:
         """The name each placeholder symbol goes by: a plain name (not a per-file variant like
         frame_time_2080b0 or strlen_alt), the one a header declares, else the one most files use."""
         variant = re.compile(r"_(gp|lui|macro|const|alt|c\d+|[a-z]|[0-9a-f]{4,})$", re.I)
-        best = {}
+        best, spellings = {}, collections.defaultdict(set)  # one symbol, any spelling (func_001204B8, FUN_001204b8)
+        for w in list(self.words) + list(self.alias.values()):
+            spellings[canon(w) or w].add(w)
         for c, t in self.alias.items():
             if UNNAMED.match(c) or c in KEYWORDS:
                 continue
             fs = self.alias_files.get(c, ())
             key = (bool(variant.search(c)), not any(f.startswith("include/") for f in fs), -len(fs), len(c), c)
-            if t not in best or key < best[t][0]:
-                best[t] = (key, c)
-        return {t: c for t, (_k, c) in sorted(best.items())}
+            g = canon(t) or t
+            if g not in best or key < best[g][0]:
+                best[g] = (key, c)
+        return {w: c for g, (_k, c) in best.items() for w in sorted(spellings[g] | ({g} if isinstance(g, str) else set()))}
 
     def var(self, d, words, path, line):
         if d.base.startswith("__typeof__"):
@@ -676,10 +679,13 @@ def build_queue(game, tree, index, named):
     # names that differ from what the rest of the code calls the same symbol (vend_rand for scale_game_frames);
     # the sda/lui/macro/const forms are deliberate data aliases (game docs/code-cleanup.md) and stay
     rname = index["rname"]
+    texts = {p: strip(t) for p, t, _ in tree.files if t is not None and p.endswith((".c", ".h"))}
     for c, t in sorted(alias.items()):
         if rname.get(t, c) != c and not UNNAMED.match(c) and c not in KEYWORDS \
                 and not re.search(r"_(gp|lui|macro|const)$", c) and tree.c_words.get(c):
-            queue.append(["n", c, tree.c_words[c]])
+            # counted only in the files that declare it: `section` is also an attribute elsewhere
+            n = sum(len(re.findall(r"\b%s\b" % c, texts[f])) for f in tree.alias_files[c] if f in texts)
+            queue.append(["n", c, n or tree.c_words[c]])
     queue.sort(key=lambda x: (-x[2], x[0], x[1]))
 
     # ideas: proposals in the game's tables, for every spelling of the placeholder in the code

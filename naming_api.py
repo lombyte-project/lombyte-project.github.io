@@ -226,7 +226,7 @@ def build(site_dir):
         for i, line in enumerate(src["t"].split("\n"), 1):
             if re.match(r"\s*INCLUDE_(ASM|RODATA)\(", line):
                 continue  # it names the assembly file and keeps the old name
-            for w in want.intersection(word.findall(line)):
+            for w in want.intersection(word.findall(re.sub(r'__asm__\s*\(\s*"[^"]*"\s*\)', "", line))):
                 hits.setdefault(w, []).append((f["p"], i))
 
     sent = open_issues(idx["repo"])
