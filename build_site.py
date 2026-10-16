@@ -3,7 +3,8 @@
 
 Run from a checkout of the game repository's main branch: the logo comes from
 assets/, the commits bar from its git log, the numbers and the map from report.json
-and decomp_map.svg on its `progress` branch. The page sources live next to this script.
+and decomp_map.svg on its `progress` branch, the Naming Desk data from its
+sources (naming_data/gen.py). The page sources live next to this script.
 
 usage: build_site.py PROGRESS_DIR [SITE_URL]
 """
@@ -70,6 +71,9 @@ apple = Image.new("RGB", (180, 180), "#000")
 apple.paste(square.resize((150, 150), Image.LANCZOS), (15, 15), square.resize((150, 150), Image.LANCZOS))
 apple.save(out / "apple-touch-icon.png", optimize=True)
 shutil.copy(progress / "decomp_map.svg", out)
+# Naming Desk data from this checkout of the game, so every deploy shows the current names.
+subprocess.run([sys.executable, pathlib.Path(__file__).resolve().parent / "naming_data" / "gen.py",
+                progress / "report.json", out / "naming-data"], check=True)
 naming_api.build(out)  # namingdesk.json, for AI tools
 
 

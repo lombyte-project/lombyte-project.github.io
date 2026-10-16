@@ -1,0 +1,628 @@
+{
+"D_0013D388": [
+[
+"(Planet Rilgar) Win The Hoverboard Race",
+0,
+1
+]
+],
+"D_0013D389": [
+[
+"(Planet Orxon) Buy The Premium Nanotech",
+3,
+1
+]
+],
+"D_0013D396": [
+[
+"(Planet Aridia) Use Your Swingshot",
+6,
+1
+]
+],
+"D_0013D3A0": [
+[
+"(Planet Kerwan) Ride The Robot Train",
+0,
+1
+]
+],
+"D_0013D3A8": [
+[
+"(Planet Nebula G34) Explore The Space Station",
+0,
+2
+]
+],
+"D_0013D3AA": [
+[
+"(Planet Nebula G34) Explore The Blarg Warship",
+0,
+1
+],
+[
+"(Planet Nebula G34) Destroy The Warship",
+2,
+1
+]
+],
+"D_0013D3B1": [
+[
+"(Planet Umbris) Survive Qwark's Gauntlet",
+0,
+1
+]
+],
+"D_0013D3B7": [
+[
+"(Planet Batalia) Scout The Area",
+0,
+1
+]
+],
+"D_0013D3DD": [
+[
+"(Planet Pokitaru) Check Out The Resort",
+0,
+1
+]
+],
+"D_0013D3E9": [
+[
+"(Planet Hoven) Explorer The Icy Wastes",
+0,
+1
+]
+],
+"D_0013D3F0": [
+[
+"(Planet Quarty) Infiltrate The Secure Area",
+6,
+1
+],
+[
+"(Planet Kalebo III) Win The Hoverboard Race",
+8,
+1
+],
+[
+"(Planet Kalebo III) Ride The Grind Rail",
+9,
+1
+]
+],
+"D_0013D3FD": [
+[
+"(Veldin Orbit) Swim Through The Water Tanker",
+3,
+1
+],
+[
+"(Planet Veldin) Save Ratchet's Planet",
+8,
+1
+]
+],
+"D_0013D428": [
+[
+"Bomb Glove",
+40,
+4
+],
+[
+"Devastator",
+44,
+4
+],
+[
+"Visibomb Gun",
+52,
+4
+]
+],
+"D_0013D464": [
+[
+"Blaster",
+0,
+4
+],
+[
+"Pyrocitor",
+4,
+4
+],
+[
+"Mine Glove",
+8,
+4
+],
+[
+"Tesla Claw",
+16,
+4
+],
+[
+"Glove Of Doom",
+20,
+4
+],
+[
+"R.Y.N.O.",
+32,
+4
+],
+[
+"Drone Device",
+36,
+4
+],
+[
+"Decoy Glove",
+40,
+4
+]
+],
+"D_0013D4C0": [
+[
+"Zoomerator",
+0,
+1
+],
+[
+"Raritanium",
+1,
+1
+]
+],
+"D_0013D4C2": [
+[
+"(Have Backpack) Heli-Pack",
+0,
+1
+],
+[
+"CodeBot",
+0,
+1
+]
+],
+"D_0013D4C3": [
+[
+"(Have Backpack) Thruster-Pack",
+0,
+1
+]
+],
+"D_0013D4C4": [
+[
+"(Have Backpack) Hydro-Pack",
+0,
+1
+],
+[
+"Premium Nanotech",
+0,
+1
+]
+],
+"D_0013D4C5": [
+[
+"(Have Head Item) Sonic Summoner",
+0,
+1
+],
+[
+"Ultra Nanotech",
+0,
+1
+]
+],
+"D_0013D4C6": [
+[
+"(Have Head Item) O2 Mask",
+0,
+1
+],
+[
+"(Have Head Item) Pilot's Helmet",
+1,
+1
+]
+],
+"D_0013D4CC": [
+[
+"(Have Hand Item) Swingshot",
+0,
+1
+]
+],
+"D_0013D4D6": [
+[
+"(Have Hand Item) Hydrodisplacer",
+0,
+1
+]
+],
+"D_0013D4DA": [
+[
+"(Have Hand Item) Trespasser",
+0,
+1
+],
+[
+"(Have Hand Item) Metal Detector",
+1,
+1
+]
+],
+"D_0013D4DC": [
+[
+"(Have Foot Item) Magneboots",
+0,
+1
+]
+],
+"D_0013D4DD": [
+[
+"(Have Foot Item) Grindboots",
+0,
+1
+]
+],
+"D_0013D4DE": [
+[
+"Hoverboard",
+0,
+1
+]
+],
+"D_0013D4DF": [
+[
+"(Have Hand Item) Hologuise",
+0,
+1
+],
+[
+"(Have Hand Item) Gadgetron PDA",
+1,
+1
+]
+],
+"D_0013D4E1": [
+[
+"Map-O-Matic",
+0,
+1
+]
+],
+"D_0013D4E2": [
+[
+"Bold Grabber",
+0,
+1
+]
+],
+"D_0013D4E3": [
+[
+"Persuader",
+0,
+1
+]
+],
+"D_0013D4F1": [
+[
+"(Planet Eudora) Explore The Mills",
+0,
+1
+]
+],
+"D_0013D4FD": [
+[
+"(Planet Oltanis) Search The Destroyed City",
+0,
+1
+]
+],
+"D_0013D507": [
+[
+"(Planet Quarty) Explore The Coolant",
+3,
+1
+],
+[
+"(Planet Kalebo III) Ride The Grind Rail",
+2,
+1
+]
+],
+"D_0013D5BC": [
+[
+"(Planet Novalis) Explore The Waterworks",
+48,
+1
+],
+[
+"(Planet Aridia) Locate Skid McMarx",
+256,
+1
+],
+[
+"(Planet Aridia) Find Skid's Agent",
+272,
+1
+],
+[
+"(Planet Kerwan) Visit Al's Roboshack",
+320,
+1
+],
+[
+"(Planet Kerwan) Complete Fitness Course",
+336,
+1
+]
+],
+"D_0013D73C": [
+[
+"(Planet Kerwan) Complete Fitness Course",
+0,
+1
+],
+[
+"(Planet Rilgar) Locate Captain Qwark",
+240,
+4
+],
+[
+"(Planet Rilgar) Win The Hoverboard Race",
+224,
+1
+],
+[
+"(Planet Rilgar) Win The Hoverboard Race",
+256,
+1
+]
+],
+"D_0013D8AC": [
+[
+"(Planet Nebula G34) Explore The Space Station",
+0,
+1
+],
+[
+"(Planet Umbris) Destroy The Snagglebeast",
+80,
+1
+],
+[
+"(Planet Batalia) Ride The Grind Rail",
+144,
+1
+],
+[
+"(Planet Batalia) Talk To The Commando",
+128,
+1
+],
+[
+"(Planet Batalia) Explore The Walled City",
+160,
+1
+],
+[
+"(Planet Orxon) Explore As Ratchet",
+272,
+1
+],
+[
+"(Planet Orxon) Catch The Infobot",
+256,
+1
+]
+],
+"D_0013D9DC": [
+[
+"(Planet Pokitaru) Help The Resort Owner",
+0,
+1
+],
+[
+"(Planet Pokitaru) Navigate The Sewers",
+32,
+1
+]
+],
+"D_0013DA1C": [
+[
+"(Planet Hoven) Buy Hydro-Pack From Ed",
+0,
+1
+],
+[
+"(Oltanis Orbit) Explore Base",
+80,
+1
+]
+],
+"D_0013DB2C": [
+[
+"(Planet Oltanis) Find Survivors Of Blarg Attack",
+16,
+1
+],
+[
+"(Planet Oltanis) Purchase Gadgetron PDR From 'Steve'",
+0,
+1
+],
+[
+"(Planet Quarty) Find Out More About The Ultra-Mech",
+112,
+1
+],
+[
+"(Planet Kalebo III) Win The Hoverboard Race",
+240,
+1
+]
+],
+"D_0013DD42": [
+[
+"(Planet Novalis) Buy Infobot From Mechanic",
+0,
+1
+]
+],
+"D_0013DD43": [
+[
+"(Planet Novalis) Find A New Ship",
+0,
+1
+],
+[
+"(Planet Kerwan) Ride The Robot Train",
+1,
+1
+],
+[
+"(Planet Eudora) Confront Robot Lieutenant",
+3,
+1
+]
+],
+"D_0013DD47": [
+[
+"(Planet Rilgar) Bribe The Bodyguard",
+0,
+1
+],
+[
+"(Planet Umbris) Find A New Ship",
+1,
+1
+]
+],
+"D_0013DD49": [
+[
+"(Planet Batalia) Buy Deserter's Infobot",
+0,
+1
+]
+],
+"D_0013DD4A": [
+[
+"(Planet Batalia) Meet The Commando At City",
+0,
+1
+]
+],
+"D_0013DD4B": [
+[
+"(Planet Orxon) Traverse The Wilderness",
+0,
+1
+]
+],
+"D_0013DD4C": [
+[
+"(Planet Orxon) Catch The Infobot",
+0,
+1
+],
+[
+"(Planet Hoven) Destroy The Planetbuster",
+1,
+1
+],
+[
+"(Oltanis Orbit) Shoot Down Captain Qwark",
+2,
+1
+]
+],
+"D_0013DD4F": [
+[
+"(Planet Oltanis) Buy Infobot From Scrap Merchant",
+0,
+1
+]
+],
+"D_0013DD50": [
+[
+"(Planet Quarty) Destroy The Ultra-Mechs",
+0,
+1
+]
+],
+"D_0013DD58": [
+[
+"(Planet Kerwan) Explore The Rest Of The City",
+3,
+1
+],
+[
+"(Planet Eudora) Explore The Mills",
+4,
+1
+],
+[
+"(Planet Orxon) Explore As Ratchet",
+10,
+1
+],
+[
+"(Planet Hoven) Explorer The Icy Wastes",
+12,
+1
+],
+[
+"(Planet Quarty) Explore The Coolant",
+15,
+1
+],
+[
+"(Veldin Orbit) Swim Through The Water Tanker",
+17,
+1
+]
+],
+"D_001415D4": [
+[
+"Infinite Air",
+28,
+4
+]
+],
+"D_001415F8": [
+[
+"Infinite Health",
+0,
+4
+]
+],
+"D_0015ED98": [
+[
+"Quick Bolt Gain",
+0,
+1
+],
+[
+"Super Quick Bolt Gain",
+0,
+2
+],
+[
+"Max Bolts",
+0,
+4
+]
+],
+"D_0015EE20": [
+[
+"Unlock Goodies",
+0,
+4
+]
+]
+}
