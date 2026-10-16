@@ -525,10 +525,14 @@ def main():
 
 
 def build_xrefs(index):
-    """Per function name: who calls it, where its address is taken, what it calls (xrefs.json.gz).
+    """Per function name, who calls it and where its address is kept (xrefs.json.gz).
 
-    {name: [callers [[name, levels, call sites in one copy]], pointers [[holder, levels, 'code'|'data']], callees [names]]}.
-    Levels are 'boot' or two-digit numbers joined by ','. Only exact function starts count as targets."""
+    {name: {"c": [[caller, caller copy, callee copy, levels, [call offsets in the caller]]],
+            "p": [[holder, "d", levels, offset in the table, callee copy] or
+                  [function, "c", levels, [offsets], callee copy, function copy]]}}
+    Levels are 'boot' or two-digit numbers joined by ','. A copy is the index of an identical
+    function among the same name's addresses in one level (functions.tsv merges identical code);
+    offsets are relative to the function's start, so the page finds the address in any level."""
     path = HERE / "xrefs.json.gz"
     if not path.exists():
         return None
@@ -541,52 +545,61 @@ def build_xrefs(index):
         m = re.match(r"^D_L(\d\d)_", n)
         if n.startswith("D_") or m:
             data_at[m.group(1) if m else "boot"].append((a, n))
-    for v in data_at.values():
-        v.sort()
 
     def finder(lv):
-        rows = sorted(progs.get(lv, []) + (progs["boot"] if lv != "boot" else []))
+        # a level replaces the start-up code above LEVEL_DATA_START; only the resident part stays
+        rows = sorted(progs.get(lv, []) + ([r for r in progs["boot"] if r[0] < 0x15EF00] if lv != "boot" else []))
         starts = [r[0] for r in rows]
-        exact = {r[0]: r[2] for r in rows}
+        copies = collections.defaultdict(list)
+        for r in rows:
+            copies[r[2]].append(r[0])
+        exact = {r[0]: (r[2], copies[r[2]].index(r[0])) for r in rows}
 
         def inside(a):
             i = bisect.bisect_right(starts, a) - 1
-            return rows[i][2] if i >= 0 and a < rows[i][0] + max(rows[i][1], 4) else None
+            if i < 0 or a >= rows[i][0] + max(rows[i][1], 4):
+                return None
+            return rows[i][2], copies[rows[i][2]].index(rows[i][0]), a - rows[i][0]
         return exact, inside
 
-    callers = collections.defaultdict(lambda: collections.defaultdict(collections.Counter))  # callee -> caller -> level -> calls
-    ptrs = collections.defaultdict(lambda: collections.defaultdict(set))
-    callees = collections.defaultdict(set)
-    for key, prog in xr.items():
-        lv = key if key != "boot" else "boot"
+    calls = collections.defaultdict(lambda: collections.defaultdict(set))  # callee -> key -> levels
+    held = collections.defaultdict(lambda: collections.defaultdict(set))
+    for lv, prog in xr.items():
         exact, inside = finder(lv)
+        sites = collections.defaultdict(list)
         for insn, target, _tail in prog["calls"]:
             t, c = exact.get(target), inside(insn)
-            if not t or not c or t == c:
-                continue
-            callers[t][c][lv] += 1
-            callees[c].add(t)
+            if t and c and (c[0], c[1]) != t:
+                sites[(t, c[0], c[1])].append(c[2])
+        for (t, cn, cc), offs in sites.items():
+            calls[t[0]][(cn, cc, t[1], tuple(sorted(offs)))].add(lv)
+        sites = collections.defaultdict(list)
         for insn, target in prog["ptrs"]:
             t, c = exact.get(target), inside(insn)
-            if t and c and t != c:
-                ptrs[t][(c, "code")].add(lv)
+            if t and c and (c[0], c[1]) != t:
+                sites[(t, c[0], c[1])].append(c[2])
+        for (t, cn, cc), offs in sites.items():
+            held[t[0]][(cn, "c", tuple(sorted(offs)), t[1], cc)].add(lv)
         # a level keeps the executable's data names only below its own data (LEVEL_DATA_START)
-        dl = data_at.get(lv, []) + [d for d in data_at["boot"] if lv == "boot" or d[0] < 0x15EF00]
-        dl.sort()
+        dl = sorted(data_at.get(lv, []) + [d for d in data_at["boot"] if lv == "boot" or d[0] < 0x15EF00])
         dstarts = [d[0] for d in dl]
         for at, target in prog["words"]:
             t = exact.get(target)
             i = bisect.bisect_right(dstarts, at) - 1
             if t and i >= 0:
-                ptrs[t][(dl[i][1], "data")].add(lv)
+                held[t[0]][(dl[i][1], "d", at - dl[i][0], t[1])].add(lv)
 
     def lvs(s):
         return ",".join(sorted(s, key=lambda x: (x != "boot", x)))
     out = {}
-    for name in set(callers) | set(ptrs) | set(callees):
-        out[name] = [sorted(([c, lvs(r), max(r.values())] for c, r in callers.get(name, {}).items()), key=lambda x: (-x[2], x[0])),
-                     sorted([h, lvs(l), k] for (h, k), l in ptrs.get(name, {}).items()),
-                     sorted(callees.get(name, ()))]
+    for name in set(calls) | set(held):
+        c = [[cn, cc, tc, lvs(l), list(offs)] for (cn, cc, tc, offs), l in calls.get(name, {}).items()]
+        c.sort(key=lambda r: (-len(r[4]), r[0]))
+        p = []
+        for k, l in held.get(name, {}).items():
+            p.append([k[0], "d", lvs(l), k[2], k[3]] if k[1] == "d" else [k[0], "c", lvs(l), list(k[2]), k[3], k[4]])
+        p.sort(key=lambda r: (r[1], r[0]))
+        out[name] = {"c": c, "p": p}
     return out
 
 

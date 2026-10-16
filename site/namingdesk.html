@@ -150,25 +150,23 @@ h1 span{color:var(--orange)}
 .chipcopy:focus-visible{outline:2px solid var(--orange)}
 .facts{display:flex;flex-wrap:wrap;gap:4px 24px;font-size:13px;color:var(--dim)}
 .facts code{font-family:var(--mono);font-size:12.5px;color:var(--soft)}
-.xg{display:flex;flex-direction:column;gap:8px}
-.xbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.xtabs{display:flex;gap:4px;flex-wrap:wrap}
-.xtabs button{all:unset;cursor:pointer;font-size:13px;color:var(--soft);padding:4px 10px;border-radius:6px;border:1px solid var(--line)}
-.xtabs button span{color:var(--dim);font-variant-numeric:tabular-nums}
-.xtabs button[aria-selected="true"]{color:var(--fg);border-color:var(--orange)}
-.xtabs button:focus-visible,.xn:focus-visible,.xt:focus-visible{outline:2px solid var(--orange);outline-offset:1px}
-.xq{flex:1;min-width:120px;max-width:240px;font:inherit;font-size:13px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:4px 8px}
 .xnote{margin:0}
-.xl,.xsub{list-style:none;margin:0;padding:0;font-family:var(--mono);font-size:12px}
-.xl{max-height:260px;overflow:auto;border-top:1px solid var(--line);padding-top:4px}
-.xsub{padding-left:18px;border-left:1px solid var(--line);margin-left:9px}
-.xrow{display:flex;align-items:center;gap:6px;min-width:0}
-.xt{all:unset;cursor:pointer;width:16px;flex:none;text-align:center;color:var(--dim)}
-.xt:hover{color:var(--fg)}
-.xn{all:unset;cursor:pointer;color:var(--orange);padding:2px 4px;border-radius:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.xn:hover{background:var(--hover)}
-.xm{margin-left:auto;padding-left:12px;color:var(--dim);white-space:nowrap;font-variant-numeric:tabular-nums}
-.xmore{color:var(--dim);padding:4px 26px}
+.xh{margin:6px 0 0;font-size:13px;font-weight:500;color:var(--soft)}
+.xcopy{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.xcopy button{all:unset;cursor:pointer;font-family:var(--mono);font-size:12px;color:var(--soft);padding:2px 8px;border-radius:6px;border:1px solid var(--line)}
+.xcopy button[aria-pressed="true"]{color:var(--fg);border-color:var(--orange)}
+.xl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.xl>li{display:flex;flex-direction:column;gap:3px;padding:8px 0;border-top:1px solid var(--line);min-width:0}
+.xrow{display:flex;align-items:baseline;gap:8px;min-width:0}
+.xn{all:unset;cursor:pointer;font-family:var(--mono);font-size:13px;color:var(--orange);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.xn:hover{text-decoration:underline}
+.xn.xd{cursor:default;color:var(--fg)}.xn.xd:hover{text-decoration:none}
+.xn:focus-visible,.xline:focus-visible,.xcopy button:focus-visible{outline:2px solid var(--orange);outline-offset:1px}
+.xpart{font-size:12px;color:var(--dim);white-space:nowrap}
+.xm{margin-left:auto;font-size:12px;color:var(--dim);white-space:nowrap;font-variant-numeric:tabular-nums}
+.xaddr{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.xline{all:unset;cursor:pointer;font-family:var(--mono);font-size:12px;color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:1px 6px;border-left:2px solid var(--line)}
+.xline:hover{color:var(--fg);border-left-color:var(--orange)}
 .linkb{all:unset;cursor:pointer;color:var(--orange);text-decoration:underline;text-underline-offset:2px}
 .xback{margin-right:4px}
 details.uses{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:12px 0}
@@ -1279,27 +1277,54 @@ function usesBlock(e){
    assembly and pointers to the function count too. Calls made through a pointer the game computes
    while it runs are not visible here; the places that take the address are. */
 let XR = null, xrLoading = false;
-function xrefOf(w){
-  if (!XR) return null;
-  return XR[w] || XR[IDX.alias[w]] || (realName(w) && XR[realName(w)]) || null;
-}
-/* The call graph: one list at a time (callers, callees, address taken), a filter for long lists,
-   a ▸ on each caller to see who calls that one, and a click to walk to that function's card. */
-let xrQ = 0, XOPEN = false, XTAB = 'in', XQ = '', XEXP = new Set(), NAV = [];
+let xrQ = 0, XOPEN = false, XALL = false, XCOPY = -1, NAV = [], FSTART = null, CL = new Map(), clBusy = false;
 const xName = n => realName(n) || n;
-const xWhere = l => { const v = l.split(','); return v.length >= 17 ? 'all levels' : v.length > 3 ? v.length + ' levels' : v.map(z => z === 'boot' ? 'boot' : 'L' + z).join(' '); };
-function xRows(list, kind, depth, path){
-  const q = XQ.toLowerCase(), shown = depth ? list : list.filter(r => !q || (xName(r[0]) + ' ' + r[0] + ' ' + (r[1] || '')).toLowerCase().includes(q));
-  const cap = depth ? 50 : 200, rows = shown.slice(0, cap).map(r => {
-    const n = r[0], key = path + '>' + n, sub = kind === 'in' && xrefOf(n), open = XEXP.has(key);
-    const meta = kind === 'in' ? `${r[2] > 1 ? '×' + r[2] + ' · ' : ''}${xWhere(r[1])}` : kind === 'ptr' ? `${r[2] === 'data' ? 'data table' : 'code'} · ${xWhere(r[1])}` : '';
-    const tog = kind === 'in' ? (sub && sub[0].length ? `<button class="xt" type="button" data-xexp="${esc(key)}" aria-expanded="${open}" title="Who calls ${esc(xName(n))}">${open ? '▾' : '▸'}</button>` : '<span class="xt"></span>') : '';
-    const kids = open && sub ? `<ul class="xsub">${xRows(sub[0], 'in', depth + 1, key)}</ul>` : '';
-    return `<li><div class="xrow">${tog}<button class="xn" type="button" data-fn="${esc(n)}">${esc(xName(n))}</button><span class="xm">${esc(meta)}</span></div>${kids}</li>`;
-  });
-  if (shown.length > cap) rows.push(`<li class="xmore">${shown.length - cap} more${depth ? '' : ', filter to find one'}</li>`);
-  if (!shown.length) rows.push(`<li class="xmore">${q ? 'Nothing matches the filter' : 'None'}</li>`);
-  return rows.join('');
+function fstart(n, lv){
+  if (!FSTART){ FSTART = {}; for (const f of IDX.fmap) ((FSTART[f[2]] ??= {})[f[3] || 'boot'] ??= []).push(f[0]); for (const k in FSTART) for (const l in FSTART[k]) FSTART[k][l].sort((x, y) => x - y); }
+  return (FSTART[n] || {})[lv] || [];
+}
+/* The part of the game a function belongs to: the folder of its C file. */
+function partOf(n){
+  const d = IDX.defs[xName(n)] || IDX.defs[n]; if (!d) return /^FUN_L\d\d_/.test(n) ? 'level code' : 'other';
+  const dirs = d[0].split('/').slice(0, -1); return dirs[dirs.length - 1] || 'other';
+}
+const lvTag = l => l === 'boot' ? 'boot' : 'level ' + l;
+/* The level to show a row in: the one picked above when the row has it, else its first. */
+function rowLevel(levels, want){ const v = levels.split(','); return v.includes(want) ? want : v[0]; }
+function xrefOf(w){ if (!XR) return null; return XR[w] || XR[IDX.alias[w]] || (realName(w) && XR[realName(w)]) || null; }
+function xrefKey(w){ return !XR ? null : XR[w] ? w : XR[IDX.alias[w]] ? IDX.alias[w] : realName(w) && XR[realName(w)] ? realName(w) : null; }
+/* Every name the C gives the callee, to find its calls in the caller's code. */
+function calleeNames(w){
+  const t = IDX.alias[w] || w, out = new Set([w, t]); const r = realName(w); if (r) out.add(r);
+  for (const [k, v] of Object.entries(IDX.alias)) if (v === t) out.add(k);
+  return [...out].filter(x => /^[A-Za-z_]\w*$/.test(x));
+}
+async function callLines(e, rows){
+  if (clBusy) return; clBusy = true;
+  const re = new RegExp('\\b(' + calleeNames(e.word).join('|') + ')\\s*\\('), word = e.word; let added = 0;
+  for (const r of rows){
+    const n = r[0]; if (CL.has(word + '>' + n)) continue; added++;
+    const d = IDX.defs[xName(n)] || IDX.defs[n], out = [];
+    if (d){
+      const f = IDX.byPath[d[0]], B = f && f.b ? (await bundle(f.b))[d[0]] : null;
+      if (B){ const fn = (B.f || []).find(x => x.n === xName(n) || x.n === n) || {s: d[1], e: d[1] + 400}, L = B.t.split('\n');
+        for (let i = fn.s; i <= Math.min(fn.e, L.length) && out.length < 2; i++) if (re.test(L[i - 1])) out.push([d[0], i, L[i - 1].trim().slice(0, 120)]); }
+    }
+    CL.set(word + '>' + n, out);
+  }
+  clBusy = false;
+  if (added && el && el.word === word) renderCard();
+}
+function callsData(e){
+  const x = xrefOf(e.word); if (!x) return null;
+  const w = where(e.word), want = w.lv || 'boot', copies = fstart(xrefKey(e.word), want);
+  /* one row per caller (and copy): the build of the level picked above when it has one, those first */
+  const has = r => r[3].split(',').includes(want), best = new Map();
+  for (const r of x.c){ if (XCOPY >= 0 && r[2] !== XCOPY) continue; const k = r[0] + '|' + r[1] + '|' + r[2], o = best.get(k); if (!o || (has(r) && !has(o)) || (has(r) === has(o) && r[4].length > o[4].length)) best.set(k, r); }
+  const rows = [...best.values()].sort((a, b) => has(b) - has(a) || b[4].length - a[4].length || (a[0] > b[0]) - (a[0] < b[0]));
+  const ptrs = x.p.filter(r => XCOPY < 0 || r[4] === XCOPY).sort((a, b) => has([0, 0, 0, b[2]]) - has([0, 0, 0, a[2]]));
+  const parts = new Map(); for (const r of x.c) parts.set(partOf(r[0]), (parts.get(partOf(r[0])) || new Set()).add(r[0]));
+  return {x, want, copies, rows, ptrs, parts: [...parts].map(([k, v]) => [k, v.size]).sort((a, b) => b[1] - a[1])};
 }
 function callsBlock(e){
   if (e.kind !== 'function') return '';
@@ -1307,28 +1332,41 @@ function callsBlock(e){
     if (!xrLoading){ xrLoading = true; load('_xref').then(x => { XR = x; if (el && el.kind === 'function') renderCard(); }).catch(() => { XR = {}; }); }
     return '<div class="uload" role="status"><span class="spin" aria-hidden="true"></span>Finding every call in the game…<i aria-hidden="true"></i></div>';
   }
-  const x = xrefOf(e.word) || [[], [], []], [callers, ptrs, callees] = x;
-  if (!callers.length && !ptrs.length && !callees.length) return '<div class="faint">The game code never calls it, never takes its address and calls nothing.</div>';
-  const tabs = [['in', 'Callers', callers.length], ['out', 'Calls', callees.length], ['ptr', 'Address taken', ptrs.length]].filter(t => t[2]);
-  if (!tabs.some(t => t[0] === XTAB)) XTAB = tabs[0][0];
-  const list = XTAB === 'in' ? callers : XTAB === 'out' ? callees.map(n => [n]) : ptrs;
-  const note = XTAB === 'in' ? 'From the game programs, assembly included. ▸ shows who calls that one.' : XTAB === 'ptr' ? 'Code or a data table holds its address, so it also runs through a pointer.' : '';
-  return `<section class="xg" id="xg"><div class="xbar"><div class="xtabs" role="tablist">${tabs.map(t => `<button type="button" role="tab" data-xtab="${t[0]}" aria-selected="${t[0] === XTAB}">${t[1]} <span>${t[2].toLocaleString('en')}</span></button>`).join('')}</div>${list.length > 12 ? `<input class="xq" id="xq" type="search" placeholder="Filter" aria-label="Filter the list" value="${esc(XQ)}" autocomplete="off" spellcheck="false">` : ''}</div>${note ? `<p class="faint xnote">${note}</p>` : ''}<ul class="xl">${xRows(list, XTAB, 0, '')}</ul></section>`;
+  const D = callsData(e);
+  if (!D || (!D.x.c.length && !D.x.p.length)) return '<div class="faint">Nothing in the game code calls it or keeps its address.</div>';
+  const {rows, ptrs, want, copies} = D, shown = XALL ? rows : rows.slice(0, 8);
+  const pick = copies.length > 1 ? `<div class="xcopy" role="group" aria-label="Which copy"><span class="faint">${copies.length} identical copies in ${lvTag(want)}:</span>${[['All', -1], ...copies.map((a, i) => [hex(a), i])].map(([t, i]) => `<button type="button" data-xcopy="${i}" aria-pressed="${XCOPY === i}">${t}</button>`).join('')}</div>` : '';
+  const row = r => {
+    const [n, cc, , levels, offs] = r, lv = rowLevel(levels, want), st = fstart(n, lv)[cc], lines = CL.get(e.word + '>' + n);
+    const addrs = st != null ? offs.slice(0, 3).map(o => copyChip(hex(st + o))).join(' ') + (offs.length > 3 ? ` <span class="faint">+${offs.length - 3} more</span>` : '') : '<span class="faint">address unknown</span>';
+    return `<li><div class="xrow"><button class="xn" type="button" data-fn="${esc(n)}">${esc(xName(n))}</button><span class="xpart">${esc(partOf(n))}</span><span class="xm">${offs.length > 1 ? plural(offs.length, 'call', 'calls') : '1 call'}${lv !== want ? ' · ' + lvTag(lv) : ''}</span></div>
+      <div class="xaddr">${addrs}</div>${lines && lines.length ? lines.map(l => `<button class="xline" type="button" data-go="${esc(l[0])}" data-ln="${l[1]}">${esc(l[2])}</button>`).join('') : ''}</li>`;
+  };
+  const prow = r => {
+    const lv = rowLevel(r[2], want);
+    if (r[1] === 'd'){ const base = addressOf(r[0]); return `<li><div class="xrow"><span class="xn xd">${esc(xName(r[0]))}</span><span class="xpart">table</span><span class="xm">slot ${r[3] / 4}${lv !== want ? ' · ' + lvTag(lv) : ''}</span></div>${base != null ? `<div class="xaddr">${copyChip(hex(base + r[3]))} <span class="faint">holds its address</span></div>` : ''}</li>`; }
+    const st = fstart(r[0], lv)[r[5]];
+    return `<li><div class="xrow"><button class="xn" type="button" data-fn="${esc(r[0])}">${esc(xName(r[0]))}</button><span class="xpart">${esc(partOf(r[0]))}</span><span class="xm">passes its address${lv !== want ? ' · ' + lvTag(lv) : ''}</span></div>${st != null ? `<div class="xaddr">${copyChip(hex(st + r[3][0]))}</div>` : ''}</li>`;
+  };
+  if (rows.length) setTimeout(() => callLines(e, shown), 0);
+  return `${pick}${rows.length ? `<p class="faint xnote">Copy an address into a PCSX2 breakpoint (Execute) to stop on that call only. Click a name to open that function.</p><ul class="xl">${shown.map(row).join('')}</ul>${rows.length > shown.length ? `<button class="ghost sm" type="button" id="xall">Show all ${rows.length}</button>` : ''}` : '<div class="faint">No direct calls.</div>'}
+    ${ptrs.length ? `<h4 class="xh">Also reached through a pointer</h4><ul class="xl">${ptrs.slice(0, XALL ? 400 : 6).map(prow).join('')}</ul>` : ''}`;
 }
 /* Walk to another function's card; Back returns along the same path. */
 async function goFn(n, back){
   if (!back && el && el.kind === 'function') NAV.push(el.word);
-  XQ = ''; XEXP = new Set();
-  const w = xName(n), at = IDX.defs[w] || IDX.defs[n];
+  XALL = false; XCOPY = -1;
+  const w = xName(n), at = IDX.defs[w] || IDX.defs[n], word = IDX.defs[w] || !IDX.defs[n] ? w : n;
   if (at) await openFile(at[0], at[1]);
-  select({kind: 'function', word: IDX.defs[w] || XR[w] || !IDX.defs[n] ? w : n});
-  setFull(true);
+  XOPEN = true; select({kind: 'function', word}); setFull(true);
 }
-/* One line above the game check: a breakpoint only shows the paths you play. */
+/* One line in step 1: how widely it is used, by part of the game. */
 function callHint(e){
-  const x = e.kind === 'function' && xrefOf(e.word); if (!x) return '';
-  const n = x[0].length, p = x[1].length; if (n < 2 && !p) return '';
-  return `<p class="faint callhint">${n ? `Called from ${plural(n, 'function', 'functions')}` : `Its address is taken in ${plural(p, 'place', 'places')}`}: a breakpoint only shows the paths you play. <button class="linkb" type="button" id="seecalls" data-t="${n ? 'in' : 'ptr'}">${n ? 'See the callers' : 'See where'}</button></p>`;
+  if (e.kind !== 'function' || !XR) return '';
+  const D = callsData(e); if (!D || (!D.x.c.length && !D.x.p.length)) return '';
+  const n = new Set(D.x.c.map(r => r[0])).size, top = D.parts.slice(0, 4).map(([k, v]) => `${esc(k)} (${v})`).join(', ');
+  const what = n ? `Called from ${plural(n, 'function', 'functions')}${D.parts.length > 1 ? ` in ${D.parts.length} parts of the game: ${top}${D.parts.length > 4 ? ' and more' : ''}` : ''}` : `Reached only through a pointer`;
+  return `<p class="faint callhint">${what}. <button class="linkb" type="button" id="seecalls">${n ? "See the calls" : "See where"}</button></p>`;
 }
 /* The name the issue uses: the typed one, or the current one when the data only moves. */
 const newName = (e, d) => d.nn || (d.mv && movable(e.kind === 'global' && dataOf(e.word)) ? e.word : '');
@@ -1430,7 +1468,7 @@ function renderCard(){
         <div class="bad full" id="bad" role="status"></div>
       </div><span class="faint saved" id="saved"${DRAFTS[elKey(e)] ? '' : ' hidden'}>✓ Saved in this browser, so you can come back to it later.</span></li>
       <li><h3>Send it</h3><div class="send-row"><a class="send" id="send" target="_blank" rel="noopener">Suggest it on GitHub ↗</a><button class="ghost addb" id="addb" type="button">+ Add to draft issue</button></div><p class="faint sendnote">One name: suggest it now, GitHub opens a filled-in issue and you press Submit. Several names: add each to the draft issue and send them together.</p></li></ol>
-      ${calls ? `<details class="more-facts" id="xdet"${XOPEN ? ' open' : ''}><summary>Call graph: who calls it, what it calls</summary>${calls}</details>` : ''}
+      ${calls ? `<details class="more-facts" id="xdet"${XOPEN ? ' open' : ''}><summary>${XR && xrefOf(e.word) && !xrefOf(e.word).c.length ? 'Reached through a pointer' : 'Called from' + (XR && xrefOf(e.word) ? ' (' + new Set(xrefOf(e.word).c.map(r => r[0])).size + ')' : '')}</summary>${calls}</details>` : ''}
       ${more ? `<details class="more-facts"><summary>Details: where it is used, data, file</summary>${more}</details>` : ''}`;
   }
   /* the same card drawn again (facts arrived, a list changed): keep where the reader had scrolled */
@@ -1464,11 +1502,10 @@ function renderCard(){
   if ($('addb')) $('addb').onclick = addToBasket;
   if ($('xback')) $('xback').onclick = () => goFn(NAV.pop(), true);
   if ($('xdet')) $('xdet').ontoggle = () => { XOPEN = $('xdet').open; };
-  if ($('seecalls')) $('seecalls').onclick = () => { XOPEN = true; XTAB = $('seecalls').dataset.t; XQ = ''; renderCard(); $('xdet').open = true; $('xdet').scrollIntoView({block: 'start', behavior: 'smooth'}); };
-  c.querySelectorAll('[data-xtab]').forEach(b => b.onclick = () => { XTAB = b.dataset.xtab; XQ = ''; renderCard(); });
+  if ($('seecalls')) $('seecalls').onclick = () => { XOPEN = true; renderCard(); $('xdet').scrollIntoView({block: 'start', behavior: 'smooth'}); };
+  if ($('xall')) $('xall').onclick = () => { XALL = true; renderCard(); };
+  c.querySelectorAll('[data-xcopy]').forEach(b => b.onclick = () => { XCOPY = +b.dataset.xcopy; XALL = false; renderCard(); });
   c.querySelectorAll('[data-fn]').forEach(b => b.onclick = () => goFn(b.dataset.fn));
-  c.querySelectorAll('[data-xexp]').forEach(b => b.onclick = () => { const k = b.dataset.xexp; XEXP.has(k) ? XEXP.delete(k) : XEXP.add(k); renderCard(); });
-  if ($('xq')) $('xq').oninput = () => { XQ = $('xq').value; const at = $('xq').selectionStart; clearTimeout(xrQ); xrQ = setTimeout(() => { renderCard(); const q = $('xq'); if (q){ q.focus(); q.setSelectionRange(at, at); } }, 120); };
   if ($('mv')) $('mv').onchange = () => { saveDraft(); link(); };
   c.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => copy(b.dataset.copy));
   c.querySelectorAll('[data-go]').forEach(b => b.onclick = async ev => {
