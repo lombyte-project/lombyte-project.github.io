@@ -167,6 +167,8 @@ h1 span{color:var(--orange)}
 .xm{margin-left:auto;font-size:12px;color:var(--dim);white-space:nowrap;font-variant-numeric:tabular-nums}
 .xaddr{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .xline{all:unset;cursor:pointer;font-family:var(--mono);font-size:12px;color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:1px 6px;border-left:2px solid var(--line)}
+.xln{color:var(--dim);margin-right:10px;font-variant-numeric:tabular-nums}
+.xmorel{font-size:12px;align-self:flex-start;margin-left:8px}
 .xline:hover{color:var(--fg);border-left-color:var(--orange)}
 .linkb{all:unset;cursor:pointer;color:var(--orange);text-decoration:underline;text-underline-offset:2px}
 .xback{margin-right:4px}
@@ -752,6 +754,7 @@ function where(w){
 
 async function select(e){
   if (e !== el) FULL = false;  /* a new pick opens small, so the code stays in view */
+  if (e !== el){ UALL = false; UEXP = new Set(); }
   el = e; uses = null;
   if (e.kind === 'field') e.name = SN(e.cands[e.pick][0]) + '.' + e.word;
   else if (!e.name) e.name = e.word;
@@ -1267,21 +1270,37 @@ function dataBlock(e, mv){
   const box = movable(d) ? `<label class="mv"><input type="checkbox" id="mv"${mv ? ' checked' : ''}>Move it into this file. A new name is optional.</label>` : '';
   return `<div class="data"><div class="drow"><span class="st ${st[0]}">${st[1]}</span><span>${regionName(d[0])}</span>${d[2] ? `<span>${d[2].toLocaleString('en')} bytes</span>` : ''}</div>${rd || box ? `<div class="drow"><span>${rd}</span>${box}</div>` : ''}</div>`;
 }
+/* Used in and Read by look like Called from: one row per file (name, folder, count), its code lines
+   under it, the first files shown and the rest behind "Show all". */
+let UOPEN = false, ROPEN = false, UALL = false, UEXP = new Set();
+function byFile(list){
+  const m = new Map(); for (const x of list){ const f = m.get(x[0]); if (f) f.push(x); else m.set(x[0], [x]); }
+  return [...m];
+}
+/* A file's place in short: its last two folders, with the level for level code (L02 · gameplay/hero). */
+function where2(dirs){ const lv = dirs.find(d => /^l\d\d$/.test(d)); return (lv ? 'L' + lv.slice(1) + ' · ' : dirs.includes('shared') ? 'shared · ' : '') + dirs.slice(-2).join('/'); }
+function fileRows(groups, lines, all, cap = 8){
+  const shown = all ? groups : groups.slice(0, cap);
+  return `<ul class="xl">${shown.map(([p, xs]) => {
+    const dirs = p.split('/'), name = dirs.pop(), open = UEXP.has(p), max = lines ? (open ? xs.length : 3) : 0;
+    return `<li><div class="xrow"><button class="xn" type="button" data-go="${esc(p)}" data-ln="${xs[0][1]}" title="${esc(p)}">${esc(name)}</button><span class="xpart">${esc(where2(dirs))}</span><span class="xm">${plural(xs.length, 'use', 'uses')}</span></div>
+      ${xs.slice(0, max).map(x => `<button class="xline" type="button" data-go="${esc(x[0])}" data-ln="${x[1]}"><span class="xln">${x[1]}</span>${esc(x[2])}</button>`).join('')}${lines && xs.length > 3 ? `<button class="linkb xmorel" type="button" data-uexp="${esc(p)}">${open ? 'Fewer lines' : `${xs.length - 3} more lines`}</button>` : ''}</li>`;
+  }).join('')}</ul>${groups.length > shown.length ? `<button class="ghost sm" type="button" id="uall">Show all ${groups.length}</button>` : ''}`;
+}
 function usesBlock(e){
   if (!uses) return '<div class="uload" role="status"><span class="spin" aria-hidden="true"></span>Finding every place that uses it…<i aria-hidden="true"></i></div>';
   if (!uses.list.length) return `<div class="faint">${e.kind === 'file' || e.kind === 'folder' ? 'No other file in src/ or include/ refers to this path.' : 'Nothing else in the code uses it.'}</div>`;
-  const likely = e.kind === 'field' && e.cands.length > 1;
-  const what = e.kind === 'local' ? `Used ${plural(uses.list.length, 'time', 'times')} inside <code class="mono">${esc(e.fn)}</code>` : e.kind === 'file' || e.kind === 'folder' ? `Mentioned in ${plural(uses.list.length, 'place', 'places')} in ${plural(uses.files, 'file', 'files')}` : `Used in ${plural(uses.list.length, 'place', 'places')} in ${plural(uses.files, 'file', 'files')}`;
-  const note = likely ? `${e.cands.length} structs have a field called ${esc(e.word)}; this counts files that use ${esc(SN(e.cands[e.pick][0]))}` : 'all of them change with the new name';
-  return `<details class="more-facts" id="udet"${UOPEN ? ' open' : ''}><summary>${what}<span class="faint unote">${note}</span></summary><ul class="ulist">${uses.list.slice(0, 400).map(x => `<li><button type="button" data-go="${esc(x[0])}" data-ln="${x[1]}"><b>${esc(x[0])}:${x[1]}</b>  ${esc(x[2])}</button></li>`).join('')}</ul></details>`;
+  const path = e.kind === 'file' || e.kind === 'folder', title = e.kind === 'local' ? 'Used inside ' + esc(e.fn) : path ? 'Mentioned in' : 'Used in';
+  const note = e.kind === 'field' && e.cands.length > 1 ? `${e.cands.length} structs have a field called ${esc(e.word)}; these are the files that use ${esc(SN(e.cands[e.pick][0]))}.`
+    : path ? `${plural(uses.files, 'file', 'files')} name this path; they change with it.` : e.kind === 'local' ? 'Every line changes with the new name.' : `${plural(uses.files, 'file', 'files')}; every line changes with the new name.`;
+  const groups = byFile(uses.list);
+  return `<details class="more-facts" id="udet"${UOPEN ? ' open' : ''}><summary>${title} (${uses.list.length.toLocaleString('en')})</summary><p class="faint xnote">${note}</p>${fileRows(groups, true, UALL || e.kind === 'local')}</details>`;
 }
-let UOPEN = false, ROPEN = false;
-/* The C files that read a global, from the same search as Used in: one row per file, opening its first use. */
+/* The C files that read a global: the same rows, without the lines (they are under Used in). */
 function readersBlock(e){
   const d = e.kind === 'global' && dataOf(e.word); if (!d || d[4] < 2 || !uses) return '';
-  const files = new Map(); for (const x of uses.list) if (x[0].endsWith('.c')){ const f = files.get(x[0]); if (f) f[1]++; else files.set(x[0], [x[1], 1]); }
-  if (!files.size) return '';
-  return `<details class="more-facts" id="rdet"${ROPEN ? ' open' : ''}><summary>Read by ${plural(files.size, 'C file', 'C files')}${d[1] ? '' : '<span class="faint unote">it stays in assembly until only one file reads it</span>'}</summary><ul class="ulist">${[...files].map(([p, [ln, n]]) => `<li><button type="button" data-go="${esc(p)}" data-ln="${ln}"><b>${esc(p)}</b>  ${plural(n, 'use', 'uses')}</button></li>`).join('')}</ul></details>`;
+  const groups = byFile(uses.list.filter(x => x[0].endsWith('.c'))); if (!groups.length) return '';
+  return `<details class="more-facts" id="rdet"${ROPEN ? ' open' : ''}><summary>Read by (${groups.length})</summary><p class="faint xnote">${d[1] ? 'These C files read it.' : 'It stays in assembly until only one C file reads it.'}</p>${fileRows(groups, false, true)}</details>`;
 }
 /* Callers, address takers and callees from the game programs themselves, so calls from code still in
    assembly and pointers to the function count too. Calls made through a pointer the game computes
@@ -1479,7 +1498,7 @@ function renderCard(){
       </div><span class="faint saved" id="saved"${DRAFTS[elKey(e)] ? '' : ' hidden'}>✓ Saved in this browser, so you can come back to it later.</span></li>
       <li><h3>Send it</h3><div class="send-row"><a class="send" id="send" target="_blank" rel="noopener">Suggest it on GitHub ↗</a><button class="ghost addb" id="addb" type="button">+ Add to draft issue</button></div><p class="faint sendnote">One name: suggest it now, GitHub opens a filled-in issue and you press Submit. Several names: add each to the draft issue and send them together.</p></li></ol>
       ${more}
-      ${calls ? `<details class="more-facts" id="xdet"${XOPEN ? ' open' : ''}><summary>${XR && xrefOf(e.word) && !xrefOf(e.word).c.length ? 'Reached through a pointer' : 'Called from' + (XR && xrefOf(e.word) ? ' (' + new Set(xrefOf(e.word).c.map(r => r[0])).size + ')' : '')}</summary>${calls}</details>` : ''}
+      ${calls ? `<details class="more-facts" id="xdet"${XOPEN ? ' open' : ''}><summary>${XR && xrefOf(e.word) && !xrefOf(e.word).c.length ? 'Reached through a pointer' : 'Called from' + (XR && xrefOf(e.word) ? ' (' + new Set(xrefOf(e.word).c.map(r => r[0])).size.toLocaleString('en') + ')' : '')}</summary>${calls}</details>` : ''}
       ${readersBlock(e)}
       ${usedIn}
       `;
@@ -1516,6 +1535,8 @@ function renderCard(){
   if ($('xback')) $('xback').onclick = () => goFn(NAV.pop(), true);
   if ($('xdet')) $('xdet').ontoggle = () => { XOPEN = $('xdet').open; };
   if ($('seecalls')) $('seecalls').onclick = () => { XOPEN = true; renderCard(); $('xdet').scrollIntoView({block: 'start', behavior: 'smooth'}); };
+  if ($('uall')) $('uall').onclick = () => { UALL = true; renderCard(); };
+  c.querySelectorAll('[data-uexp]').forEach(b => b.onclick = () => { const k = b.dataset.uexp; UEXP.has(k) ? UEXP.delete(k) : UEXP.add(k); renderCard(); });
   if ($('rdet')) $('rdet').ontoggle = () => { ROPEN = $('rdet').open; };
   if ($('udet')) $('udet').ontoggle = () => { UOPEN = $('udet').open; };
   if ($('xall')) $('xall').onclick = () => { XALL = true; renderCard(); };
