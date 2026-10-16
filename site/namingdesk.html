@@ -291,7 +291,7 @@ textarea{font-family:var(--mono);font-size:13px;line-height:20px;color:var(--fg)
 .qf{display:flex;gap:8px;align-items:center}
 .seg{display:flex;gap:4px;flex:1}
 .seg .chip{flex:1;text-align:center;white-space:nowrap}
-#qk{font:inherit;font-size:12px;height:26px;padding:0 6px;border-radius:13px;border:1px solid var(--line);background:var(--bg);color:var(--soft)}
+#qk{font:inherit;font-size:12px;height:26px;padding:0 6px 0 10px;border-radius:13px;border:1px solid var(--line);background:var(--bg);color:var(--soft)}
 #qk:focus-visible{outline:2px solid var(--orange)}
 .chip{all:unset;cursor:pointer;font-size:12px;line-height:18px;padding:3px 10px;border-radius:12px;border:1px solid var(--line);color:var(--soft)}
 .chip[aria-pressed="true"]{border-color:var(--orange);color:var(--orange);background:var(--orange-bg)}
@@ -380,7 +380,7 @@ html.leave .wrap{transition:opacity .35s ease,transform .35s ease,filter .35s ea
   <div class="grid">
     <nav class="side" aria-label="Files and names">
       <div class="tabs" role="tablist" aria-label="Browse by"><button class="tab" role="tab" id="tabFiles" type="button" aria-selected="false">Browse code</button><button class="tab" role="tab" id="tabQueue" type="button" aria-selected="true">To name</button></div>
-      <div class="qf" id="qf" hidden><div class="seg" role="group" aria-label="Show"><button type="button" class="chip" id="ideaOnly" aria-pressed="true" title="Names with a clue: a name idea from the repo or a cheat code. The easiest place to start.">Has a clue</button><button type="button" class="chip" id="allNames" aria-pressed="false" title="Every name still to find, most used first">All names</button></div><select id="qk" aria-label="Kind"><option value="">Any kind</option><option value="f">Functions</option><option value="g">Data</option><option value="d">Fields</option></select></div>
+      <div class="qf" id="qf" hidden><div class="seg" role="group" aria-label="Show"><button type="button" class="chip" id="ideaOnly" aria-pressed="true" title="Names with a clue: a name idea from the repo or a cheat code. The easiest place to start.">Has a clue</button><button type="button" class="chip" id="allNames" aria-pressed="false" title="Every name still to find, most used first">All names</button></div><select id="qk" aria-label="Kind"><option value="">Any kind</option><option value="f">Functions</option><option value="g">Data</option><option value="d">Fields</option><option value="n" title="Names that the rest of the code gives another name">Two names</option></select></div>
       <input class="search" id="q" type="search" placeholder="Search a file or a name…" autocomplete="off" spellcheck="false" aria-label="Search a file or a name">
       <div class="list" id="list"></div>
       <div class="key" id="key"><span><i class="dot" style="background:var(--exact)"></i>matches the game</span><span><i class="dot" style="background:var(--draft)"></i>C draft</span><span><i class="dot" style="background:var(--asm)"></i>still assembly</span></div>
@@ -517,7 +517,7 @@ const qName = it => it[0] === 'd' ? SN(it[1].slice(0, it[1].lastIndexOf('.'))) +
 const ideaOf = w => QD && (QD.sugg[w] || QD.sugg[IDX.alias[w]]);
 /* Public cheat codes for the US game that write this global: [[title, offset, bytes], ...] */
 const cheatsOf = w => QD && QD.cheat && (QD.cheat[w] || QD.cheat[IDX.alias[w]]);
-const hasIdea = it => it[0] === 'f' ? ideaOf(it[1]) : it[0] === 'g' && cheatsOf(it[1]);
+const hasIdea = it => it[0] === 'n' || (it[0] === 'f' ? ideaOf(it[1]) : it[0] === 'g' && cheatsOf(it[1]));
 /* Data facts per global: [region, in C, size, reader files, reader count]. Only bytes a proof checks count
    (docs/progress-metrics.md), so a name alone moves nothing; moving data its one reader owns does. */
 const dataOf = w => QD && QD.data && (QD.data[w] || QD.data[IDX.alias[w]]);
@@ -533,9 +533,9 @@ function renderQueue(){
   if (MOVE) all = all.slice().sort((a, b) => (dataOf(b[1])[2] || 0) - (dataOf(a[1])[2] || 0) || b[2] - a[2]);
   const open = all.filter(it => !SENT.has(qName(it))), done = all.filter(it => SENT.has(qName(it)));
   const rows = [...open, ...done].slice(0, 150);
-  const kind = {f:'function', g:'global', d:'field'};
+  const kind = {f:'function', g:'global', d:'field', n:'named differently elsewhere'};
   const bulk = []; renderQueue.bulk = bulk;  /* bulk drafts and Ready to move are AI work now: namingdesk.json */
-  $('list').innerHTML = `<div class="grp">${IDEA ? `${all.length.toLocaleString('en')} names with a clue. Pick one, check it in the game, send a name.` : `${all.length.toLocaleString('en')} names, most used first`}</div>`
+  $('list').innerHTML = `<div class="grp">${QK === 'n' ? `${all.length.toLocaleString('en')} ${all.length === 1 ? 'name' : 'names'} the rest of the code calls otherwise. Pick one and use the same name.` : IDEA ? `${all.length.toLocaleString('en')} ${all.length === 1 ? 'name' : 'names'} with a clue. Pick one, check it in the game, send a name.` : `${all.length.toLocaleString('en')} names, most used first`}</div>`
     + (bulk.length ? `<button class="ghost sm bulk" id="bulk" type="button" title="${MOVE ? 'Each one moves into its only reader' : 'Uses the name idea shown on each one'}">Add ${bulk.length.toLocaleString('en')} to draft issue</button>` : '') + rows.map(it => {
     const n = qName(it), sent = SENT.has(n), idea = hasIdea(it), d = it[0] === 'g' && dataOf(it[1]), mv = movable(d);
     const badge = sent ? '<span class="badge sent">sent</span>' : idea ? '<span class="badge bi">idea</span>' : mv ? '<span class="badge mv">1 file</span>' : d && d[1] ? '<span class="badge ic">in C</span>' : '';
@@ -610,16 +610,29 @@ async function openGlobal(n){
 async function openQueue(k, n){
   if (k === 'f') return jumpToName(n);
   if (k === 'g') return openGlobal(n);
+  if (k === 'n') return openNamed(n);
   const i = n.lastIndexOf('.'), key = n.slice(0, i), fld = n.slice(i + 1), s = IDX.structs[key], fd = s && s.f.find(x => x[0] === fld);
   if (!s) return;
   await openFile(s.p, fd && fd[2]);
   const c = structsWithField(fld); select({kind:'field', word:fld, cands:c, pick:Math.max(0, c.findIndex(x => x[0] === key))});
 }
+/* Open the first file that declares this name for its symbol. */
+async function openNamed(n){
+  for (const f of IDX.files){
+    if (!f.b) continue;
+    const t = (await bundle(f.b))[f.p].t, i = t.search(new RegExp('\\b' + n + '\\b[^;]*__asm__'));
+    if (i >= 0){ await openFile(f.p, t.slice(0, i).split('\n').length); return select({kind: nameKind(n) === 'function' ? 'function' : 'global', word:n}); }
+  }
+}
 async function jumpToName(n){
   const key = IDX.structs[n] ? n : Object.keys(IDX.structs).find(k => SN(k) === n);
   if (key){ const s = IDX.structs[key]; await openFile(s.p, s.l); return select({kind:'type', word:n, key}); }
-  const at = IDX.defs[n], k = nameKind(n);
+  let at = IDX.defs[n]; const k = nameKind(n);
   if (!at && k === 'global') return openGlobal(n);
+  if (at && k === 'function' && (await fnBody(n) || {}).asm){  /* only assembly so far: show the first C line that uses it */
+    const u = await findUses({kind:'function', word:n}), c = u.list.find(x => !/^\s*extern\b/.test(x[2])) || u.list[0];
+    if (c) at = [c[0], c[1]];
+  }
   if (at) await openFile(at[0], at[1]);
   select(k === 'struct' ? {kind:'type', word:n} : {kind: k === 'function' ? 'function' : 'global', word:n});
 }
@@ -780,7 +793,7 @@ async function select(e){
   if (e.kind === 'local'){ uses = localUses(e); renderCard(); return; }
   await loadAll(); if (el !== e) return;
   const r = e.kind === 'file' || e.kind === 'folder' ? await pathUses(e) : await findUses(e);
-  if (el === e){ uses = r; renderCard(); }
+  if (el === e){ uses = r; e.asmOnly = (e.kind === 'function' || e.kind === 'global') && !r.list.length && r.asm > 0; renderCard(); }
 }
 function localUses(e){
   const L = fileT.t.split('\n'), re = new RegExp('\\b' + e.word + '\\b'), list = [];
@@ -795,7 +808,7 @@ async function findUses(e){
 }
 async function findUsesRaw(e){
   const re = e.kind === 'field' ? new RegExp('(->|\\.)\\s*' + e.word + '\\b') : new RegExp('\\b' + e.word + '\\b');
-  const sn = e.kind === 'field' ? e.cands[e.pick][0] : null, list = []; let files = 0;
+  const sn = e.kind === 'field' ? e.cands[e.pick][0] : null, list = []; let files = 0, asm = 0;
   let t0 = performance.now();
   for (const f of IDX.files){
     if (!f.b) continue;
@@ -804,11 +817,12 @@ async function findUsesRaw(e){
     if (sn && e.cands.length > 1 && !new RegExp('\\b' + SN(sn) + '\\b').test(B.t)) continue;
     const L = B.t.split('\n'), enc = n => (B.f || []).find(x => n >= x.s && n <= x.e);
     let hit = false;
-    L.forEach((l, i) => { if (re.test(l)){ const fn = enc(i+1); list.push([f.p, i+1, l.trim().slice(0, 140), fn ? fn.n : null]); hit = true; } });
+    /* INCLUDE_ASM names the assembly file, so that line keeps the old name until the function is in C */
+    L.forEach((l, i) => { if (re.test(l) && /^\s*INCLUDE_(ASM|RODATA)\(/.test(l)) asm++; else if (re.test(l)){ const fn = enc(i+1); list.push([f.p, i+1, l.trim().slice(0, 140), fn ? fn.n : null]); hit = true; } });
     if (sn && IDX.structs[sn].p === f.p){ const dl = e.cands[e.pick][2]; if (dl && !list.some(x => x[0] === f.p && x[1] === dl)){ list.push([f.p, dl, (L[dl-1] || '').trim()]); hit = true; } }
     if (hit) files++;
   }
-  return {list, files};
+  return {list, files, asm};
 }
 async function pathUses(e){
   const n = e.name, base = n.split('/').pop(), stem = n.replace(/^(src|include)\//, '').replace(/\.[ch]$/, '');
@@ -1479,7 +1493,10 @@ function realName(w){
     RNAME = {};  /* the generator picks the name a header declares, else the one most files use */
     for (const [k, v] of Object.entries(IDX.rname || {})) RNAME[k.toLowerCase()] = v;
   }
-  return /^(fun|func|d|sub)_/i.test(w) ? RNAME[w.toLowerCase()] : null;
+  if (/^(fun|func|d|sub)_/i.test(w)) return RNAME[w.toLowerCase()];
+  /* a name only some files use for a symbol the rest call otherwise (vend_rand for scale_game_frames) */
+  const t = IDX.alias[w], r = t && RNAME[t.toLowerCase()];
+  return r && r !== w && !/_(gp|lui|macro|const)$/.test(w) ? r : null;
 }
 function ideaBlock(e){
   const rn = (e.kind === 'function' || e.kind === 'global') && realName(e.word);
@@ -1501,6 +1518,7 @@ function renderCard(){
   if (!keep.nn && !keep.why){ keep.nn = saved.nn || ''; keep.why = saved.why || ''; keep.mv = saved.mv ?? MOVE; }  /* picked from Ready to move: the move is already ticked */
   let body;
   if (e.infra) body = `<div class="small">${INFRA_NOTE[e.word] || 'This is part of the build setup or the compiler, not a name from the game, so there is nothing to rename here.'}</div>`;
+  else if (e.asmOnly) body = `<div class="small">Only its <code>INCLUDE_ASM</code> line names it so far, and that line names the assembly file, so there is nothing to rename in C yet. It gets a name once C code calls it.</div>` + callsBlock(e);
   else {
     const path = e.kind === 'file' || e.kind === 'folder';
     const pick = e.kind === 'field' && e.cands.length > 1 ? `<label class="full" for="st">Which struct? ${e.cands.length} have a field called ${esc(e.word)}<select id="st">${e.cands.map((x,i) => `<option value="${i}"${i===e.pick?' selected':''}>${esc(SN(x[0]))}${x[0].includes('@') ? ' — ' + esc(x[0].split('@')[1].split('/').pop()) : ''}${x[1]!=null?'  (+'+hex(x[1],1)+')':''}</option>`).join('')}</select></label>` : '';
@@ -1603,6 +1621,7 @@ function setFull(f){
 /* The small card: the facts worth a glance, so the code stays visible until the panel is opened. */
 function peek(e){
   if (e.infra) return '<div class="peek"><span>Build setup, nothing to rename</span></div>';
+  if (e.asmOnly) return '<div class="peek"><span>Only the assembly names it, nothing to rename in C yet</span></div>';
   const out = [];
   if (e.kind === 'function' || e.kind === 'global'){ const w = where(e.word); if (w.a != null) out.push(`<code>${hex(w.a)}</code>${w.lv ? ' in level ' + w.lv : ''}`); }
   if (e.kind === 'field'){ const o = e.cands[e.pick][1]; if (o != null) out.push(`offset <code>+${hex(o, 1)}</code>`); }
@@ -1653,6 +1672,7 @@ function spec(e, nn, why, u = uses, mvOn = e === el && draft().mv){
     folder: [`\`git mv ${e.name} ${nn}\`, fix the \`#include\` lines below, and in the same commit update the unit paths in ${lvl ? '`config/overlays/us/functions.tsv`' : '`config/us/rnc1.us.yaml`'}.`],
     name: [`Rename \`${e.word}\` to \`${nn}\` at every place below.`],
   }[e.kind] || [];
+  if (u && u.asm && !same) how.push('Leave the `INCLUDE_ASM` line as it is: it names the assembly file, so it keeps the old name until the function is written in C.');
   if (same) how.length = 0;
   if (mv){
     const lv = lvd ? `--level ${+dd[0].slice(6)} --overlays DIR ` : '';

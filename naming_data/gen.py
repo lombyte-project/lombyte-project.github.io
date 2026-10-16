@@ -105,6 +105,7 @@ class Tree:
         self.gtype, self.decl_line, self.fn_meta = {}, {}, {}
         self.words = collections.Counter()  # word -> occurrences over the tree
         self.word_files = collections.defaultdict(set)
+        self.c_words = collections.Counter()  # the same, without INCLUDE_ASM lines (they name the assembly file)
         self.funcs = {}  # path -> [{n,s,e,k,(p)}]
         self.fuzzy = {}
         for u in report.get("units", []):
@@ -133,6 +134,7 @@ class Tree:
             self.words[w] += 1
         for w in set(re.findall(r"\b[A-Za-z_]\w*\b", code)):
             self.word_files[w].add(path)
+        self.c_words.update(re.findall(r"\b[A-Za-z_]\w*\b", re.sub(r"(?m)^\s*INCLUDE_(ASM|RODATA)\(.*$", "", code)))
         top_infra = path.startswith("include/") and path.count("/") == 1
         for line, d in preprocessor_lines(code):
             m = re.match(r"#\s*define\s+([A-Za-z_]\w*)(\(?)\s*(.*)", d)
@@ -645,7 +647,7 @@ def build_queue(game, tree, index, named):
         return canon(w) is not None and canon(w) not in named
 
     queue = []
-    for w, n in tree.words.items():
+    for w, n in tree.c_words.items():  # a name only an INCLUDE_ASM line uses has nothing to rename in C
         m = PLACEHOLDER.match(w)
         if not m or w != m.group(0) or not SYMBOL_HEX.match(w):
             continue
@@ -671,6 +673,13 @@ def build_queue(game, tree, index, named):
             if FIELD_UNK.match(f[0] or ""):
                 n = 1 + sum(member_use[(p, f[0])] for p in where)
                 queue.append(["d", f"{key}.{f[0]}", n])
+    # names that differ from what the rest of the code calls the same symbol (vend_rand for scale_game_frames);
+    # the sda/lui/macro/const forms are deliberate data aliases (game docs/code-cleanup.md) and stay
+    rname = index["rname"]
+    for c, t in sorted(alias.items()):
+        if rname.get(t, c) != c and not UNNAMED.match(c) and c not in KEYWORDS \
+                and not re.search(r"_(gp|lui|macro|const)$", c) and tree.c_words.get(c):
+            queue.append(["n", c, tree.c_words[c]])
     queue.sort(key=lambda x: (-x[2], x[0], x[1]))
 
     # ideas: proposals in the game's tables, for every spelling of the placeholder in the code

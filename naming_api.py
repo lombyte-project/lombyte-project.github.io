@@ -30,6 +30,7 @@ PLACEHOLDER = re.compile(r"^(fun|func|d|sub)_(l\d\d_)?[0-9a-f]", re.I)
 HIGH, MEDIUM = 0.8, 0.5
 EVIDENCE = {
     "named_elsewhere": (0.95, "Another file already gives this symbol a C name; use the same one."),
+    "named_differently": (0.6, "The header, or most files, call this symbol another name; check it fits here too."),
     "boot_match": (0.9, "Same code as a named boot function."),
     "moby_class_table": (0.8, "The level's moby class table points here: <class>_update."),
     "recovered_names": (0.7, "Name proposal from recovered names, not checked in the game."),
@@ -39,7 +40,8 @@ EVIDENCE = {
 # Steps from the game's docs/code-cleanup.md; a task lists the keys it needs in `recipe`.
 RECIPES = {
     "rename": ["Rename `{old}` to `{new}` everywhere `git grep -nw {old} -- src include` finds it.",
-               "Keep the linker symbol: every declaration gets `__asm__(\"{asm}\")`, so the build does not change."],
+               "Keep the linker symbol: every declaration gets `__asm__(\"{asm}\")`, so the build does not change.",
+               "Leave `INCLUDE_ASM` lines as they are: they name the assembly file."],
     "rename_tool": ["`python3 scripts/rename-function-proposals.py --address 0x<last 8 digits of {asm}> --diff` "
                     "shows the change from recovered_names.json; run it again with `--apply`."],
     "declare_once": ["Declare it once, in a header, and drop the other extern lines."],
@@ -149,15 +151,14 @@ def build(site_dir):
             return {"levels": {m.group(1): hx(a)}}
         return {"resident" if a < RESIDENT_END else "boot": hx(a)}
 
-    # The real C name another file already gives a placeholder (`frame_time __asm__("D_0015ED6C")`).
-    rank = lambda k: (1000 if re.search(r"_(gp|lui|macro|const|[a-z]|[0-9a-f]{4,})$", k, re.I) else 0) + len(k)
-    rname = {}
-    for k, v in alias.items():
-        if k not in KW and k not in TY and not PLACEHOLDER.match(k):
-            o = rname.get(v.lower())
-            if not o or rank(k) < rank(o):
-                rname[v.lower()] = k
-    real_name = lambda w: rname.get(w.lower()) if re.match(r"^(fun|func|d|sub)_", w, re.I) else None
+    # The C name the rest of the code gives a symbol (gen.py: the header's, else the most used one).
+    rname = {k.lower(): v for k, v in idx.get("rname", {}).items()}
+
+    def real_name(w):
+        if re.match(r"^(fun|func|d|sub)_", w, re.I):
+            return rname.get(w.lower())
+        r = rname.get(alias.get(w, "").lower())  # a name only some files use (vend_rand for scale_game_frames)
+        return r if r and r != w and not re.search(r"_(gp|lui|macro|const)$", w) else None
 
     def free(w, new):
         if not re.match(r"^[A-Za-z_]\w*$", new) or new == w or new in KW or new in TY:
@@ -176,6 +177,7 @@ def build(site_dir):
         m = re.match(r"^level (\d\d)", d[0])
         return d[3][0].startswith(f"src/overlays/l{m.group(1)}/") if m else not d[3][0].startswith("src/overlays/")
 
+    fns = set(idx["fnames"]) | set(idx["afn"])
     tasks = []
     for kind, w, used in q["queue"]:
         if kind == "d":
@@ -184,7 +186,8 @@ def build(site_dir):
         ev, new = [], None
         rn = real_name(w)
         if rn and free(w, rn):
-            new, ev = rn, [("named_elsewhere", f"`{rn}` is already its C name in another file.")]
+            new, ev = rn, [("named_differently", f"The rest of the code calls it `{rn}`.") if kind == "n" else
+                           ("named_elsewhere", f"`{rn}` is already its C name in another file.")]
         idea = kind == "f" and (q["sugg"].get(w) or q["sugg"].get(alias.get(w)))
         if idea and idea[0] != w and free(w, idea[0]):
             e = evidence_of(idea[1])
@@ -203,7 +206,8 @@ def build(site_dir):
         name_conf = max([EVIDENCE[e][0] for e, _ in ev if e not in ("one_reader", "cheat_clue")] or [0])
         conf = name_conf if new else EVIDENCE["one_reader"][0] if mv else EVIDENCE["cheat_clue"][0]
         status = [s for s, on in (("ready_to_move", mv), ("has_idea", bool(new) or bool(cheats)),
-                                  ("named_elsewhere", bool(rn and new == rn))) if on]
+                                  ("named_elsewhere", bool(rn and new == rn and kind != "n")),
+                                  ("named_differently", bool(rn and new == rn and kind == "n"))) if on]
         tasks.append({"kind": kind, "w": w, "new": new, "used": used, "d": d, "mv": mv, "ev": ev,
                       "conf": conf, "status": status, "cheats": cheats})
 
@@ -220,6 +224,8 @@ def build(site_dir):
         if not want.intersection(word.findall(src["t"])):
             continue
         for i, line in enumerate(src["t"].split("\n"), 1):
+            if re.match(r"\s*INCLUDE_(ASM|RODATA)\(", line):
+                continue  # it names the assembly file and keeps the old name
             for w in want.intersection(word.findall(line)):
                 hits.setdefault(w, []).append((f["p"], i))
 
@@ -228,7 +234,7 @@ def build(site_dir):
     for x in tasks:
         w, new, d, mv = x["w"], x["new"], x["d"], x["mv"]
         link = alias.get(w, w)
-        what = "function" if x["kind"] == "f" else "global"
+        what = "function" if x["kind"] == "f" or (x["kind"] == "n" and w in fns) else "global"
         h = hits.get(w, [])
         lvd = mv and d[0].startswith("level ")
         task = {"action": "rename_and_move" if new and mv else "rename" if new else "move" if mv else "investigate",
