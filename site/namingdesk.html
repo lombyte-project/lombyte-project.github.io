@@ -246,6 +246,8 @@ textarea{font-family:var(--mono);font-size:13px;line-height:20px;color:var(--fg)
 .more-facts>summary{cursor:pointer;color:var(--dim)}
 .more-facts[open]>summary{margin-bottom:10px}
 .addb{height:40px;border-color:var(--orange-line);color:var(--orange);font-weight:600}
+.addb.busy{opacity:1;color:var(--soft);gap:8px;cursor:progress}
+.addb .spin{width:14px;height:14px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--orange);animation:spin .8s linear infinite}
 .addb:hover{background:var(--orange-bg);color:var(--orange)}
 .sendnote{margin:0}
 .bk.has b{background:var(--orange);color:var(--on-orange)}
@@ -1460,6 +1462,9 @@ function link(){
   $('bad').textContent = d.nn ? err : '';
   a.setAttribute('aria-disabled', err ? 'true' : 'false');
   $('addb').disabled = !!err || !uses;
+  /* The draft lists every place, so it waits until they are found: say so on the button. */
+  const busy = !uses, ab = $('addb');
+  if (ab.classList.contains('busy') !== busy){ ab.classList.toggle('busy', busy); ab.innerHTML = busy ? '<span class="spin" aria-hidden="true"></span>Finding every place…' : '+ Add to draft issue'; }
   if (err){ a.removeAttribute('href'); return; }
   a.href = issueURL([spec(e, nn, why)]);
 }
