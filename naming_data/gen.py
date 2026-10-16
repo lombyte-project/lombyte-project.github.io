@@ -2,12 +2,13 @@
 """Build the Naming Desk data (naming-data/) from a checkout of the game repository.
 
 Run from the game checkout (its main branch). It reads src/ and include/, the config tables and
-the progress report, plus two fixed tables kept next to this script: refs.json.gz (which retail
-code touches each data address, see make_refs.py) and cheats.json (public cheat codes per
-address). The output is what site/namingdesk.html reads:
+the progress report, plus fixed tables kept next to this script: refs.json.gz (which retail
+code touches each data address, see make_refs.py), xrefs.json.gz (where it calls or takes the
+address of code, see make_xrefs.py) and cheats.json (public cheat codes per address). The output is what site/namingdesk.html reads:
 
   t/_index.txt   files, names, symbols, struct layouts, function map
   t/_queue.txt   names still to give, ideas for them, data facts, cheat clues
+  t/_xref.txt    callers, address takers and callees of each function (xrefs.json.gz)
   t/<bundle>.txt the source text, by folder, with each file's functions
   sym/*.sym      symbol files for PCSX2
 
@@ -515,9 +516,78 @@ def main():
     (out / "_queue.txt").write_text(pack(queue))
     for k, part in out_bundles.items():
         (out / f"{k}.txt").write_text(pack(part))
+    xrefs = build_xrefs(index)
+    if xrefs is not None:
+        (out / "_xref.txt").write_text(pack(xrefs))
     write_syms(out_dir / "sym", index, tree)
     print(f"naming-data: {len(files_out)} files in {len(out_bundles)} bundles, {len(structs)} structs, "
           f"{len(queue['queue'])} names to give, {len(queue['data'])} data facts, commit {commit[:10]}")
+
+
+def build_xrefs(index):
+    """Per function name: who calls it, where its address is taken, what it calls (xrefs.json.gz).
+
+    {name: [callers [[name, levels, call sites in one copy]], pointers [[holder, levels, 'code'|'data']], callees [names]]}.
+    Levels are 'boot' or two-digit numbers joined by ','. Only exact function starts count as targets."""
+    path = HERE / "xrefs.json.gz"
+    if not path.exists():
+        return None
+    xr = json.loads(gzip.decompress(path.read_bytes()))
+    progs = collections.defaultdict(list)
+    for a, z, n, lv in index["fmap"]:
+        progs[lv or "boot"].append((a, z, n))
+    data_at = collections.defaultdict(list)
+    for n, a in index["addr"].items():
+        m = re.match(r"^D_L(\d\d)_", n)
+        if n.startswith("D_") or m:
+            data_at[m.group(1) if m else "boot"].append((a, n))
+    for v in data_at.values():
+        v.sort()
+
+    def finder(lv):
+        rows = sorted(progs.get(lv, []) + (progs["boot"] if lv != "boot" else []))
+        starts = [r[0] for r in rows]
+        exact = {r[0]: r[2] for r in rows}
+
+        def inside(a):
+            i = bisect.bisect_right(starts, a) - 1
+            return rows[i][2] if i >= 0 and a < rows[i][0] + max(rows[i][1], 4) else None
+        return exact, inside
+
+    callers = collections.defaultdict(lambda: collections.defaultdict(collections.Counter))  # callee -> caller -> level -> calls
+    ptrs = collections.defaultdict(lambda: collections.defaultdict(set))
+    callees = collections.defaultdict(set)
+    for key, prog in xr.items():
+        lv = key if key != "boot" else "boot"
+        exact, inside = finder(lv)
+        for insn, target, _tail in prog["calls"]:
+            t, c = exact.get(target), inside(insn)
+            if not t or not c or t == c:
+                continue
+            callers[t][c][lv] += 1
+            callees[c].add(t)
+        for insn, target in prog["ptrs"]:
+            t, c = exact.get(target), inside(insn)
+            if t and c and t != c:
+                ptrs[t][(c, "code")].add(lv)
+        # a level keeps the executable's data names only below its own data (LEVEL_DATA_START)
+        dl = data_at.get(lv, []) + [d for d in data_at["boot"] if lv == "boot" or d[0] < 0x15EF00]
+        dl.sort()
+        dstarts = [d[0] for d in dl]
+        for at, target in prog["words"]:
+            t = exact.get(target)
+            i = bisect.bisect_right(dstarts, at) - 1
+            if t and i >= 0:
+                ptrs[t][(dl[i][1], "data")].add(lv)
+
+    def lvs(s):
+        return ",".join(sorted(s, key=lambda x: (x != "boot", x)))
+    out = {}
+    for name in set(callers) | set(ptrs) | set(callees):
+        out[name] = [sorted(([c, lvs(r), max(r.values())] for c, r in callers.get(name, {}).items()), key=lambda x: (-x[2], x[0])),
+                     sorted([h, lvs(l), k] for (h, k), l in ptrs.get(name, {}).items()),
+                     sorted(callees.get(name, ()))]
+    return out
 
 
 # --- the queue ---------------------------------------------------------------------
