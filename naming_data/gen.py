@@ -52,7 +52,7 @@ def git(*args):
 
 
 def pack(obj):
-    return base64.b64encode(gzip.compress(json.dumps(obj, separators=(",", ":"), ensure_ascii=False).encode(),
+    return base64.b64encode(gzip.compress(json.dumps(obj, separators=(",", ":"), ensure_ascii=False, sort_keys=True).encode(),
                                           compresslevel=9, mtime=0)).decode()
 
 
@@ -592,7 +592,7 @@ def build_xrefs(index):
     def lvs(s):
         return ",".join(sorted(s, key=lambda x: (x != "boot", x)))
     out = {}
-    for name in set(calls) | set(held):
+    for name in sorted(set(calls) | set(held)):
         c = [[cn, cc, tc, lvs(l), list(offs)] for (cn, cc, tc, offs), l in calls.get(name, {}).items()]
         c.sort(key=lambda r: (-len(r[4]), r[0]))
         p = []
