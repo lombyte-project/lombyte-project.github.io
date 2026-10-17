@@ -41,10 +41,20 @@ PLACEHOLDER = re.compile(r"^(?:FUN|func|D|jtbl|lbl)_(?:L(\d\d)_)?([0-9A-Fa-f]{8}
 SYMBOL_HEX = re.compile(r"^(?:FUN|func|D|jtbl|lbl)_(?:L\d\d_)?([0-9A-Fa-f]{8})$")
 UNNAMED = re.compile(r"^(?:fun|func|d|sub)_(?:l\d\d_)?[0-9a-f]", re.I)
 FIELD_UNK = re.compile(r"^unk_?[0-9A-Fa-f]+$")
+# per-file alias spellings that are no name for anyone (f2334d0_2133a8, ea210_hide, select54, spin_s,
+# activate_effect_l08, fast_sin_cf): an address fragment, a level or variant tag, or trailing digits
+JUNK_NAME = re.compile(r"(?:^|_)(?!f(?:16|32|64)(?:_|$))(?=[0-9a-f]*[0-9])[0-9a-f]{3,}(?:_|$)"
+                       r"|(?:^|_)(?![usfv](?:8|16|32|64|128)$)[a-z]+\d{2,}$|_(?!(?:8|16|32|64|128)$)\d+$"
+                       r"|_(?:l\d*|cf|c\d*|alt|[a-wA-W])$", re.I)
 INCLUDE_ASM = re.compile(r"INCLUDE_ASM\s*\(\s*\"[^\"]*\"\s*,\s*(\w+)\s*\)")
 KEYWORDS = set("if else for while do return switch case break continue default goto sizeof static extern const "
                "volatile struct union typedef enum inline register void int char short long float double "
                "unsigned signed __asm__ __attribute__ __typeof__".split())
+
+
+def junk(name):
+    """True for a junk spelling, also under a data placement suffix (visited52_lui)."""
+    return bool(JUNK_NAME.search(re.sub(r"_(gp|lui|macro|const)$", "", name)))
 
 
 def git(*args):
@@ -101,6 +111,7 @@ class Tree:
         self.lay = Layouts()
         self.alias, self.defs, self.macros = {}, {}, {}
         self.alias_files = collections.defaultdict(set)  # C name -> files that declare it for a symbol
+        self.bound = collections.defaultdict(lambda: collections.defaultdict(set))  # C name -> label -> files
         self.fnames, self.afn, self.infra, self.typedef_names = set(), set(), set(), set()
         self.gtype, self.decl_line, self.fn_meta = {}, {}, {}
         self.words = collections.Counter()  # word -> occurrences over the tree
@@ -197,6 +208,7 @@ class Tree:
 
     def note_alias(self, name, target, path):
         self.alias.setdefault(name, target)
+        self.bound[name][target].add(path)
         if self.alias[name] == target:
             self.alias_files[name].add(path)
 
@@ -205,12 +217,12 @@ class Tree:
         frame_time_2080b0 or strlen_alt), the one a header declares, else the one most files use."""
         variant = re.compile(r"_(gp|lui|macro|const|alt|c\d+|[a-z]|[0-9a-f]{4,})$", re.I)
         best, spellings = {}, collections.defaultdict(set)  # one symbol, any spelling (func_001204B8, FUN_001204b8)
-        for w in list(self.words) + list(self.alias.values()):
+        for w in list(self.words) + [t for ts in self.bound.values() for t in ts]:
             spellings[canon(w) or w].add(w)
-        for c, t in self.alias.items():
-            if UNNAMED.match(c) or c in KEYWORDS:
+        # every label a name is bound to counts (hero_set_state is each level's copy)
+        for c, t, fs in ((c, t, fs) for c, ts in self.bound.items() for t, fs in ts.items()):
+            if UNNAMED.match(c) or c in KEYWORDS or junk(c):
                 continue
-            fs = self.alias_files.get(c, ())
             key = (bool(variant.search(c)), not any(f.startswith("include/") for f in fs), -len(fs), len(c), c)
             g = canon(t) or t
             if g not in best or key < best[g][0]:
@@ -699,7 +711,7 @@ def build_queue(game, tree, index, named):
         for e in json.loads(rn.read_text()).get("rename_proposals", {}).get("entries", []):
             cur, new = e.get("current_name"), e.get("proposed_name")
             here = spelled.get(canon(cur)) if canon(cur) else None
-            if here and new and still_unnamed(cur):
+            if here and new and still_unnamed(cur) and not junk(new):
                 for w in here:
                     sugg.setdefault(w, [new, "name proposal (recovered_names.json)", ""])
     names_dir = game / "config/overlays/us/names"
@@ -728,9 +740,11 @@ def build_queue(game, tree, index, named):
             if ":" in p:
                 lv, a = p.split(":")
                 canon_at[(lv, int(a, 16))] = f[0]
+    # one class name on two update functions of a level (rocket in level 13) names neither
+    per_level = collections.Counter((lv, new) for (lv, _a), (new, _w) in lvl_names.items())
     for (lv, a), (new, why) in sorted(lvl_names.items()):
         cn = canon_at.get((lv, a))
-        if cn and still_unnamed(cn) and new != cn:
+        if cn and still_unnamed(cn) and new != cn and per_level[(lv, new)] == 1 and not junk(new):
             for w in spelled.get(canon(cn), ()):
                 sugg.setdefault(w, [new, why, ""])
 

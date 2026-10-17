@@ -24,6 +24,8 @@ KW = set("if else for while do return switch case break continue default goto si
 TY = set("void int char short long float double unsigned signed u8 u16 u32 u64 s8 s16 s32 s64 f32 f64 b32 "
          "vs8 vu8 vs16 vu16 vs32 vu32 vs64 vu64".split())
 PLACEHOLDER = re.compile(r"^(fun|func|d|sub)_(l\d\d_)?[0-9a-f]", re.I)
+# a declaration that binds a placeholder spelling to a label with __asm__
+BOUND = re.compile(r"\b((?:FUN|func|D)_(?:L\d\d_)?[0-9A-Fa-f]{8})\b[^;{]*?__asm__\s*\(\s*\"([^\"]+)\"")
 
 # How much each kind of evidence proves the new name (0..1). An AI applies a task on its own
 # only from HIGH up; lower ones need a check in the game first.
@@ -39,7 +41,8 @@ EVIDENCE = {
 }
 # Steps from the game's docs/code-cleanup.md; a task lists the keys it needs in `recipe`.
 RECIPES = {
-    "rename": ["Rename `{old}` to `{new}` everywhere `git grep -nw {old} -- src include` finds it.",
+    "rename": ["Rename `{old}` to `{new}` at the lines `files` lists. `git grep -nw {old}` can find more: "
+               "a file that binds `{old}` with `__asm__` to another label means that other function, so leave it.",
                "Keep the linker symbol: every declaration gets `__asm__(\"{asm}\")`, so the build does not change.",
                "Leave `INCLUDE_ASM` lines as they are: they name the assembly file."],
     "rename_tool": ["`python3 scripts/rename-function-proposals.py --address 0x<last 8 digits of {asm}> --diff` "
@@ -78,6 +81,12 @@ GUIDE = [
     "bytes as a C array.",
     "One commit per task, title `decomp: rename <old> to <new>` or `decomp: move <old> into <file>`.",
 ]
+
+
+def spelled(w):
+    """(level, address) a placeholder spelling names (FUN_L01_0026e0e0, func_001F99C8), else None."""
+    m = re.match(r"^(?:FUN|func|D)_(?:L(\d\d)_)?([0-9A-Fa-f]{8})$", w)
+    return m and (m.group(1) or "", m.group(2).lower())
 
 
 def load(path):
@@ -223,10 +232,14 @@ def build(site_dir):
         src = bundles[f["b"]][f["p"]]
         if not want.intersection(word.findall(src["t"])):
             continue
+        # a file that binds a placeholder spelling to another function's label (func_001F99C8 for
+        # FUN_001fa6d0) means that other function there: its lines are not this task's places
+        other = {m.group(1) for m in BOUND.finditer(src["t"])
+                 if spelled(m.group(2)) and spelled(m.group(1)) != spelled(m.group(2))}
         for i, line in enumerate(src["t"].split("\n"), 1):
             if re.match(r"\s*INCLUDE_(ASM|RODATA)\(", line):
                 continue  # it names the assembly file and keeps the old name
-            for w in want.intersection(word.findall(re.sub(r'__asm__\s*\(\s*"[^"]*"\s*\)', "", line))):
+            for w in want.intersection(word.findall(re.sub(r'__asm__\s*\(\s*"[^"]*"\s*\)', "", line))) - other:
                 hits.setdefault(w, []).append((f["p"], i))
 
     sent = open_issues(idx["repo"])
