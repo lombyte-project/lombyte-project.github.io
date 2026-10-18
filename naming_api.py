@@ -45,8 +45,6 @@ RECIPES = {
                "a file that binds `{old}` with `__asm__` to another label means that other function, so leave it.",
                "Keep the linker symbol: every declaration gets `__asm__(\"{asm}\")`, so the build does not change.",
                "Leave `INCLUDE_ASM` lines as they are: they name the assembly file."],
-    "rename_tool": ["`python3 scripts/rename-function-proposals.py --address 0x<last 8 digits of {asm}> --diff` "
-                    "shows the change from recovered_names.json; run it again with `--apply`."],
     "declare_once": ["Declare it once, in a header, and drop the other extern lines."],
     "move_data": ["Check that no assembly reads it: `python3 scripts/data-refs.py`. If more code reads it, keep it in assembly.",
                   "`python3 scripts/data-refs.py --emit 0x<last 8 digits of {asm}> --into {move_to}` writes the definition after "
@@ -261,8 +259,7 @@ def build(site_dir):
         notes = [n for e, n in x["ev"] if e in ("cheat_clue", "recovered_names")]
         if notes:
             task["note"] = "; ".join(notes)
-        tool = "recovered_names" in task["evidence"] and what == "function"
-        recipe = ((["rename_tool"] if tool else ["rename"]) + (["declare_once"] if what == "global" else []) if new else []) + (
+        recipe = (["rename"] + (["declare_once"] if what == "global" else []) if new else []) + (
             ["move_level" if lvd else "move_data" if d[0].endswith("data") else "move_other"] if mv else [])
         task["recipe"] = recipe + (["check_build_levels" if lvd or any(p.startswith("src/overlays/") for p, _ in h)
                                     else "check_build"] if recipe else ["investigate"])

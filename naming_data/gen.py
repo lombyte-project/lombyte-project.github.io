@@ -706,14 +706,6 @@ def build_queue(game, tree, index, named):
         if canon(w):
             spelled[canon(w)].add(w)
     sugg = {}
-    rn = game / "config/us/recovered_names.json"
-    if rn.exists():
-        for e in json.loads(rn.read_text()).get("rename_proposals", {}).get("entries", []):
-            cur, new = e.get("current_name"), e.get("proposed_name")
-            here = spelled.get(canon(cur)) if canon(cur) else None
-            if here and new and still_unnamed(cur) and not junk(new):
-                for w in here:
-                    sugg.setdefault(w, [new, "name proposal (recovered_names.json)", ""])
     names_dir = game / "config/overlays/us/names"
     lvl_names = {}
     for f in sorted(names_dir.glob("level-*.json")) if names_dir.exists() else []:
