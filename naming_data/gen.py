@@ -91,6 +91,12 @@ def snake(name):
     return re.sub(r"_+", "_", s).lower().strip("_")
 
 
+def levels_dir(game):
+    """The game's level metadata folder (config/overlays/us before the rename)."""
+    new = game / "config/us/levels"
+    return new if new.is_dir() else game / "config/overlays/us"
+
+
 def symbol_files(game):
     """name -> address from the linker symbol files."""
     out = {}
@@ -480,7 +486,7 @@ def main():
             named.add(("d", "", format(a, "08x")))
 
     levels, places_tsv = {}, []
-    ftsv = game / "config/overlays/us/functions.tsv"
+    ftsv = levels_dir(game) / "functions.tsv"
     for line in ftsv.read_text().splitlines() if ftsv.exists() else []:
         f = line.split("\t")
         if line.startswith("#") or len(f) < 6:
@@ -706,7 +712,7 @@ def build_queue(game, tree, index, named):
         if canon(w):
             spelled[canon(w)].add(w)
     sugg = {}
-    names_dir = game / "config/overlays/us/names"
+    names_dir = levels_dir(game) / "names"
     lvl_names = {}
     for f in sorted(names_dir.glob("level-*.json")) if names_dir.exists() else []:
         lv = f.stem.split("-")[1]
@@ -723,7 +729,7 @@ def build_queue(game, tree, index, named):
             lvl_names.setdefault((lv, a), (new, f"level {lv}: {why}"))
     # level functions: the level's address -> the canonical name in functions.tsv
     canon_at = {}
-    ftsv = game / "config/overlays/us/functions.tsv"
+    ftsv = levels_dir(game) / "functions.tsv"
     for line in ftsv.read_text().splitlines() if ftsv.exists() else []:
         f = line.split("\t")
         if line.startswith("#") or len(f) < 6:
@@ -757,9 +763,9 @@ def boot_in_c(game):
 
 
 def level_in_c(game):
-    """name -> size of level data defined in C (config/overlays/us/data.tsv)."""
+    """name -> size of level data defined in C (config/us/levels/data.tsv)."""
     out = {}
-    p = game / "config/overlays/us/data.tsv"
+    p = levels_dir(game) / "data.tsv"
     for line in p.read_text().splitlines() if p.exists() else []:
         f = line.split("\t")
         if line.startswith("#") or len(f) < 2:
@@ -801,7 +807,7 @@ def data_facts(game, tree, index, refs, address_of, still_unnamed):
     for c, target in alias.items():
         if c in fn_file:
             fn_file.setdefault(target, fn_file[c])
-    ftsv = game / "config/overlays/us/functions.tsv"
+    ftsv = levels_dir(game) / "functions.tsv"
     exe_unit = {}
     for line in ftsv.read_text().splitlines() if ftsv.exists() else []:
         f = line.split("\t")
