@@ -54,7 +54,7 @@ RECIPES = {
                    "If more code reads it, keep it in assembly.",
                    "`python3 scripts/data-refs.py --level {level_number} --overlays DIR --emit 0x<last 8 digits of {asm}> "
                    "--into {move_to}` writes the definition after the file's functions and its row in "
-                   "`config/overlays/us/data.tsv`.",
+                   "`config/us/levels/data.tsv`.",
                    "Drop it from `config/us/symbol_addrs.txt` if it is listed there."],
     "move_other": ["Check that no assembly reads it: `python3 scripts/data-refs.py`. If more code reads it, keep it in assembly.",
                    "Define it in {move_to} after the file's functions with the values `python3 scripts/data-refs.py` prints, "

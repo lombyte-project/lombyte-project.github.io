@@ -1675,8 +1675,8 @@ function spec(e, nn, why, u = uses, mvOn = e === el && draft().mv){
     local: [`Rename \`${e.word}\` to \`${nn}\` inside \`${e.fn}\` only.`],
     type: [`Rename the type \`${e.word}\` to \`${nn}\` at every place below.`],
     macro: [`Rename the macro \`${e.word}\` to \`${nn}\` at every place below.`],
-    file: [`\`git mv ${e.name} ${nn}\`, fix the \`#include\` lines below, and in the same commit update the unit path in ${lvl ? '`config/overlays/us/functions.tsv`' : '`config/us/rnc1.us.yaml`'}.`],
-    folder: [`\`git mv ${e.name} ${nn}\`, fix the \`#include\` lines below, and in the same commit update the unit paths in ${lvl ? '`config/overlays/us/functions.tsv`' : '`config/us/rnc1.us.yaml`'}.`],
+    file: [`\`git mv ${e.name} ${nn}\`, fix the \`#include\` lines below, and in the same commit update the unit path in ${lvl ? '`config/us/levels/functions.tsv`' : '`config/us/rnc1.us.yaml`'}.`],
+    folder: [`\`git mv ${e.name} ${nn}\`, fix the \`#include\` lines below, and in the same commit update the unit paths in ${lvl ? '`config/us/levels/functions.tsv`' : '`config/us/rnc1.us.yaml`'}.`],
     name: [`Rename \`${e.word}\` to \`${nn}\` at every place below.`],
   }[e.kind] || [];
   if (u && u.asm && !same) how.push('Leave the `INCLUDE_ASM` line as it is: it names the assembly file, so it keeps the old name until the function is written in C.');
@@ -1684,7 +1684,7 @@ function spec(e, nn, why, u = uses, mvOn = e === el && draft().mv){
   if (mv){
     const lv = lvd ? `--level ${+dd[0].slice(6)} --overlays DIR ` : '';
     how.push(`Move it into \`${dd[3][0]}\`, its only C reader. First check that no assembly reads it: \`python3 scripts/data-refs.py${lv ? ' ' + lv.trim() : ''}\`; if more code reads it, keep it in assembly.`,
-      lvd || /data$/.test(dd[0]) ? `\`python3 scripts/data-refs.py ${lv}--emit 0x${link.slice(-8)} --into ${dd[3][0]}\` writes the definition after the file's functions and its ${lvd ? 'row in `config/overlays/us/data.tsv`' : 'entry in `configure.py`'} (docs/code-cleanup.md, Data).`
+      lvd || /data$/.test(dd[0]) ? `\`python3 scripts/data-refs.py ${lv}--emit 0x${link.slice(-8)} --into ${dd[3][0]}\` writes the definition after the file's functions and its ${lvd ? 'row in `config/us/levels/data.tsv`' : 'entry in `configure.py`'} (docs/code-cleanup.md, Data).`
         : `Define it after the file's functions with the values \`python3 scripts/data-refs.py\` prints, and add its entry to the matching \`*_OVERLAYS\` table in \`configure.py\` (\`--emit\` covers \`.data\` only).`,
       'Drop it from `config/us/symbol_addrs.txt` if it is listed there.');
   }

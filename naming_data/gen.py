@@ -92,9 +92,8 @@ def snake(name):
 
 
 def levels_dir(game):
-    """The game's level metadata folder (config/overlays/us before the rename)."""
-    new = game / "config/us/levels"
-    return new if new.is_dir() else game / "config/overlays/us"
+    """The game's level metadata folder."""
+    return game / "config/us/levels"
 
 
 def symbol_files(game):
